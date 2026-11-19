@@ -1,0 +1,8 @@
+/node_modules
+/tests
+/storage/logs/*
+/storage/framework/views/*.php
+/storage/framework/cache/data/*
+.env
+.git
+README.md

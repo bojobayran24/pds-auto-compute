@@ -1,0 +1,43 @@
+{
+    "version": 2,
+    "framework": null,
+    "functions": {
+        "api/index.php": {
+            "runtime": "vercel-php@0.7.2",
+            "maxDuration": 60,
+            "memory": 1024
+        }
+    },
+    "routes": [
+        {
+            "src": "/build/(.*)",
+            "dest": "/public/build/$1"
+        },
+        {
+            "src": "/favicon.ico",
+            "dest": "/public/favicon.ico"
+        },
+        {
+            "src": "/(.*)",
+            "dest": "/api/index.php"
+        }
+    ],
+    "env": {
+        "APP_NAME": "PDS Auto-Compute",
+        "APP_ENV": "production",
+        "APP_DEBUG": "false",
+        "APP_KEY": "base64:qQ24gG+3FbWjse8TNQoPtkxmIanauXMzdkvzdvWIhk4=",
+        "APP_ACCESS_PASSCODE": "psarsps 2027",
+        "GEMINI_MODEL": "gemini-2.5-flash",
+        "APP_TIMEZONE": "Asia/Manila",
+        "SESSION_DRIVER": "cookie",
+        "SESSION_ENCRYPT": "true",
+        "CACHE_STORE": "file",
+        "LOG_CHANNEL": "stderr",
+        "VIEW_COMPILED_PATH": "/tmp/storage/framework/views",
+        "APP_CONFIG_CACHE": "/tmp/storage/bootstrap/cache/config.php",
+        "APP_ROUTES_CACHE": "/tmp/storage/bootstrap/cache/routes.php",
+        "APP_SERVICES_CACHE": "/tmp/storage/bootstrap/cache/services.php",
+        "APP_PACKAGES_CACHE": "/tmp/storage/bootstrap/cache/packages.php"
+    }
+}
