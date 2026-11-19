@@ -1,50 +1,22 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "pds/auto-compute",
+    "name": "bojobayran24/pds-auto-compute",
     "type": "project",
-    "description": "Minimalist, privacy-first CS Form No. 212 (Revised 2025) PDS Work Experience & Training Auto-Compute Web Application built with Laravel and Gemini API.",
+    "description": "Minimalist, privacy-first CS Form No. 212 (Revised 2025) PDS Work Experience & Training Auto-Compute Web Application ready for Vercel.",
     "keywords": ["laravel", "pds", "cs-form-212", "gemini-api", "vercel", "hr-evaluation"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
-        "guzzlehttp/guzzle": "^7.8",
-        "laravel/framework": "^11.31"
-    },
-    "require-dev": {
-        "laravel/pint": "^1.13",
-        "phpunit/phpunit": "^11.0.1"
+        "php": ">=8.1"
     },
     "autoload": {
         "psr-4": {
             "App\\": "app/"
         }
     },
-    "autoload-dev": {
-        "psr-4": {
-            "Tests\\": "tests/"
-        }
-    },
-    "scripts": {
-        "post-root-package-install": [
-            "@php -r \"file_exists('.env') || copy('.env.example', '.env');\""
-        ],
-        "post-create-project-cmd": [
-            "@php artisan key:generate --ansi"
-        ]
-    },
-    "extra": {
-        "laravel": {
-            "dont-discover": []
-        }
-    },
     "config": {
         "optimize-autoloader": true,
         "preferred-install": "dist",
-        "sort-packages": true,
-        "allow-plugins": {
-            "pestphp/pest-plugin": true,
-            "php-http/discovery": true
-        }
+        "sort-packages": true
     },
     "minimum-stability": "stable",
     "prefer-stable": true
