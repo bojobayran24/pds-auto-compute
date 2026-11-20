@@ -412,15 +412,17 @@ STRICT PRIVACY & EXTRACTION RULES:
 4. Format all dates strictly as "dd/mm/yyyy" (e.g., "01/07/2026", "28/08/2025").
    - If a work experience "To" date says "PRESENT", "TO DATE", or "CURRENT", output "PRESENT" in uppercase.
 5. For each Work Experience item:
-   - "position_title", "department_agency_company", "date_from", "date_to", "status_of_appointment", "gov_service" ("Y" or "N"), and "computed_years" (decimal years between date_from and date_to using {$todayFormatted} when date_to is "PRESENT", rounded to 1 decimal place).
+   - "position_title", "department_agency_company", "date_from", "date_to", "status_of_appointment", "gov_service" ("Y" or "N"), and "computed_years" (decimal years between date_from and date_to using date_accomplished if found or {$todayFormatted} when date_to is "PRESENT", rounded to 1 decimal place).
 6. For each Learning & Development / Training item:
    - "training_title", "date_from", "date_to", "hours" (numeric), "type_of_ld", and "conducted_by".
+7. Also extract "date_accomplished" from the PDS last page (Page 4, near "Date Accomplished" under the applicant's signature, e.g., "05 JANUARY 2026", "January 5, 2026", "05/01/2026") formatted strictly as "YYYY-MM-DD" (e.g., "2026-01-05"). If not visible or unreadable, return empty string "".
 PROMPT;
 
     $schema = [
         'type' => 'OBJECT',
         'properties' => [
             'applicant_name' => ['type' => 'STRING'],
+            'date_accomplished' => ['type' => 'STRING'],
             'work_experience' => [
                 'type' => 'ARRAY',
                 'items' => [
@@ -711,6 +713,18 @@ PROMPT;
     }
 
     $applicantName = trim((string) ($extracted['applicant_name'] ?? ''));
+    $rawDateAcc = trim((string) ($extracted['date_accomplished'] ?? ''));
+    $dateAccomplished = '';
+    if ($rawDateAcc !== '') {
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $rawDateAcc, $dm) && checkdate((int) $dm[2], (int) $dm[3], (int) $dm[1])) {
+            $dateAccomplished = $rawDateAcc;
+        } else {
+            $ts = strtotime($rawDateAcc);
+            if ($ts !== false) {
+                $dateAccomplished = date('Y-m-d', $ts);
+            }
+        }
+    }
 
     $sendJson([
         'ok' => true,
@@ -719,6 +733,7 @@ PROMPT;
             : sprintf('Extracted %d training(s) and %d work experience item(s).', count($trainingRows), count($workRows)),
         'data' => [
             'applicant_name' => $applicantName,
+            'date_accomplished' => $dateAccomplished,
             'work_experience' => $workRows,
             'trainings' => $trainingRows,
         ],

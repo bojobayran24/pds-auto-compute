@@ -469,7 +469,8 @@
                                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'"
                                 class="px-2 py-2.5 text-xs flex items-center justify-center gap-1.5 transition whitespace-nowrap"
                             >
-                                <span>Work Experience</span>
+                                <span class="hidden xl:inline">Work Experience</span>
+                                <span class="xl:hidden">Work Exp.</span>
                                 <span
                                     :class="activeLeftTab === 'work' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-300'"
                                     class="font-mono text-[10px] tabular-nums px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap"
@@ -832,8 +833,8 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- Right Side: Direct Years & Months Inputs + Edit/Delete -->
-                                                <div class="flex items-center gap-1.5 shrink-0" @click.stop>
+                                                <!-- Right Side: Direct Years, Months & Days Inputs + Edit/Delete -->
+                                                <div class="flex items-center gap-1 shrink-0" @click.stop>
                                                     <div
                                                         :class="item.included ? 'border-blue-300 bg-white' : 'border-slate-200 bg-slate-50'"
                                                         class="flex items-center border rounded px-1.5 py-0.5 focus-within:border-blue-600"
@@ -844,21 +845,32 @@
                                                             min="0"
                                                             x-model.number="item.duration_years"
                                                             @change="normalizeRowDuration(item)"
-                                                            class="w-7 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
+                                                            class="w-6 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
                                                             title="Edit Years"
                                                         >
                                                         <span class="ml-0.5 text-[10px] font-mono text-slate-500">y</span>
-                                                        <span class="mx-1 text-slate-300">|</span>
+                                                        <span class="mx-0.5 text-slate-300">|</span>
                                                         <input
                                                             type="number"
                                                             step="1"
                                                             min="0"
                                                             x-model.number="item.duration_months"
                                                             @change="normalizeRowDuration(item)"
-                                                            class="w-7 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
+                                                            class="w-6 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
                                                             title="Edit Months (0–11)"
                                                         >
                                                         <span class="ml-0.5 text-[10px] font-mono text-slate-500">m</span>
+                                                        <span class="mx-0.5 text-slate-300">|</span>
+                                                        <input
+                                                            type="number"
+                                                            step="1"
+                                                            min="0"
+                                                            x-model.number="item.duration_days"
+                                                            @change="normalizeRowDuration(item)"
+                                                            class="w-6 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
+                                                            title="Edit Days (0–29)"
+                                                        >
+                                                        <span class="ml-0.5 text-[10px] font-mono text-slate-500">d</span>
                                                     </div>
 
                                                     <button
@@ -971,7 +983,18 @@
                                                                 min="0"
                                                                 x-model.number="item.duration_months"
                                                                 @change="normalizeRowDuration(item)"
-                                                                class="w-14 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                                class="w-12 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                            >
+                                                        </div>
+                                                        <div class="flex items-center gap-1">
+                                                            <label class="text-[10px] font-semibold uppercase text-slate-500">Days:</label>
+                                                            <input
+                                                                type="number"
+                                                                step="1"
+                                                                min="0"
+                                                                x-model.number="item.duration_days"
+                                                                @change="normalizeRowDuration(item)"
+                                                                class="w-12 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
                                                             >
                                                         </div>
                                                         <button
@@ -1053,6 +1076,36 @@
                                     <i data-lucide="eye" class="w-3.5 h-3.5"></i>
                                     <span>Preview PDF / File</span>
                                 </button>
+                            </div>
+
+                            <div class="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                                <div class="flex items-center gap-2 min-w-0 flex-1">
+                                    <label class="text-[11px] font-bold uppercase tracking-wide text-slate-500 w-28 shrink-0">
+                                        Date Accomplished:
+                                    </label>
+                                    <input
+                                        type="date"
+                                        x-model="dateAccomplished"
+                                        @change="recomputeAllPresentWorkRows()"
+                                        class="print-input font-mono text-xs font-semibold text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
+                                        title="PDS Date Accomplished (Page 4) — used as the exact cut-off date for PRESENT work experience"
+                                    >
+                                    <span
+                                        class="no-print text-[10px] font-medium px-2 py-0.5 rounded border whitespace-nowrap"
+                                        :class="dateAccomplished ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'"
+                                        x-text="dateAccomplished ? 'PRESENT cut-off: ' + formatIsoToDMY(dateAccomplished) : 'Set manually if unreadable (defaults to today)'"
+                                    ></span>
+                                    <button
+                                        x-show="dateAccomplished"
+                                        x-cloak
+                                        type="button"
+                                        @click="dateAccomplished = ''; recomputeAllPresentWorkRows()"
+                                        class="no-print text-[10px] text-slate-400 hover:text-slate-700 underline"
+                                        title="Reset to today's date"
+                                    >
+                                        Clear
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -1182,18 +1235,19 @@
                                 <thead>
                                     <tr class="bg-slate-100 text-slate-900">
                                         <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[4%]">#</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[24%]">Position Title</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[21%]">Department / Agency / Company</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[20%]">Inclusive Dates (From – To)</th>
-                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[14%]">Status / Gov't</th>
-                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[8%]">Years</th>
-                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[9%]">Months</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[22%]">Position Title</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[20%]">Department / Agency / Company</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[19%]">Inclusive Dates (From – To)</th>
+                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[13%]">Status / Gov't</th>
+                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[7%]">Years</th>
+                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[8%]">Months</th>
+                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[7%]">Days</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template x-if="selectedWorkExperiences.length === 0">
                                         <tr>
-                                            <td colspan="7" class="border border-slate-400 px-3 py-5 text-center text-slate-400">
+                                            <td colspan="8" class="border border-slate-400 px-3 py-5 text-center text-slate-400">
                                                 <span x-text="pointerDrag.active && pointerDrag.type === 'work' ? 'Release mouse to add this position here.' : 'No relevant work experience items selected. Check or drag items from the left.'"></span>
                                             </td>
                                         </tr>
@@ -1212,6 +1266,7 @@
                                             </td>
                                             <td class="border border-slate-400 px-1 py-1.5 text-center font-mono font-semibold text-slate-900 tabular-nums" x-text="formatInt(item.duration_years)"></td>
                                             <td class="border border-slate-400 px-1 py-1.5 text-center font-mono font-semibold text-slate-900 tabular-nums" x-text="formatInt(item.duration_months)"></td>
+                                            <td class="border border-slate-400 px-1 py-1.5 text-center font-mono font-semibold text-slate-900 tabular-nums" x-text="formatInt(item.duration_days)"></td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -1227,6 +1282,10 @@
                                         <td class="border border-slate-400 px-1 py-2 text-center font-mono text-xs tabular-nums">
                                             <span x-text="totalWorkMonthsInt"></span>
                                             <span class="block text-[9px] font-sans font-normal text-slate-500 leading-none mt-0.5" x-text="totalWorkMonthsInt === 1 ? 'mo' : 'mos'"></span>
+                                        </td>
+                                        <td class="border border-slate-400 px-1 py-2 text-center font-mono text-xs tabular-nums">
+                                            <span x-text="totalWorkDaysInt"></span>
+                                            <span class="block text-[9px] font-sans font-normal text-slate-500 leading-none mt-0.5" x-text="totalWorkDaysInt === 1 ? 'day' : 'days'"></span>
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -1451,6 +1510,7 @@
                 applicantName: '',
                 targetPosition: '',
                 uploadedFileName: '',
+                dateAccomplished: '', // ISO YYYY-MM-DD from PDS Page 4 ("Date Accomplished") or manual input
                 showPreviewModal: false,
                 previewViewMode: 'pdf', // 'pdf' | 'pages'
                 previewZoom: 100,
@@ -1514,6 +1574,7 @@
                     this.$watch('applicantName', () => this.saveToSessionStorage());
                     this.$watch('targetPosition', () => this.saveToSessionStorage());
                     this.$watch('uploadedFileName', () => this.saveToSessionStorage());
+                    this.$watch('dateAccomplished', () => this.saveToSessionStorage());
                     this.$watch('scanEngine', () => this.saveToSessionStorage());
 
                     this.refreshIcons();
@@ -1628,7 +1689,7 @@
                         : (item.position_title || 'Untitled Position');
                     const badge = type === 'training'
                         ? `${this.formatHours(item.hours)} hrs`
-                        : `${this.formatInt(item.duration_years)}y ${this.formatInt(item.duration_months)}m`;
+                        : `${this.formatInt(item.duration_years)}y ${this.formatInt(item.duration_months)}m ${this.formatInt(item.duration_days)}d`;
                     const meta = type === 'training'
                         ? [item.conducted_by, this.formatDateRange(item.date_from, item.date_to)].filter(Boolean).join(' • ')
                         : [item.department_agency_company, this.formatDateRange(item.date_from, item.date_to)].filter(Boolean).join(' • ');
@@ -1755,34 +1816,82 @@
                     return Number.isInteger(total) ? String(total) : total.toFixed(1);
                 },
 
-                get totalWorkMonthsRaw() {
-                    return this.selectedWorkExperiences.reduce((sum, item) => {
+                get totalWorkDurationTotals() {
+                    let rawYears = 0;
+                    let rawMonths = 0;
+                    let rawDays = 0;
+                    this.selectedWorkExperiences.forEach(item => {
                         const y = parseInt(item.duration_years, 10);
                         const m = parseInt(item.duration_months, 10);
-                        const safeY = Number.isFinite(y) && y > 0 ? y : 0;
-                        const safeM = Number.isFinite(m) && m > 0 ? m : 0;
-                        return sum + (safeY * 12) + safeM;
-                    }, 0);
+                        const d = parseInt(item.duration_days, 10);
+                        rawYears += (Number.isFinite(y) && y > 0) ? y : 0;
+                        rawMonths += (Number.isFinite(m) && m > 0) ? m : 0;
+                        rawDays += (Number.isFinite(d) && d > 0) ? d : 0;
+                    });
+                    const extraMonths = Math.floor(rawDays / 30);
+                    const days = rawDays % 30;
+                    const combinedMonths = rawMonths + extraMonths;
+                    const extraYears = Math.floor(combinedMonths / 12);
+                    const months = combinedMonths % 12;
+                    const years = rawYears + extraYears;
+                    return { years, months, days };
                 },
 
                 get totalWorkYearsInt() {
-                    return Math.floor(this.totalWorkMonthsRaw / 12);
+                    return this.totalWorkDurationTotals.years;
                 },
 
                 get totalWorkMonthsInt() {
-                    return this.totalWorkMonthsRaw % 12;
+                    return this.totalWorkDurationTotals.months;
+                },
+
+                get totalWorkDaysInt() {
+                    return this.totalWorkDurationTotals.days;
                 },
 
                 get formattedTotalWorkDurationShort() {
-                    return `${this.totalWorkYearsInt}y ${this.totalWorkMonthsInt}m`;
+                    const t = this.totalWorkDurationTotals;
+                    return `${t.years}y ${t.months}m ${t.days}d`;
                 },
 
                 get totalWorkYears() {
-                    return Number((this.totalWorkMonthsRaw / 12).toFixed(1));
+                    const t = this.totalWorkDurationTotals;
+                    return Number(((t.years * 365.25 + t.months * 30.4375 + t.days) / 365.25).toFixed(1));
                 },
 
                 get formattedTotalWorkYears() {
-                    return `${this.totalWorkYearsInt} yr${this.totalWorkYearsInt === 1 ? '' : 's'}, ${this.totalWorkMonthsInt} mo${this.totalWorkMonthsInt === 1 ? '' : 's'}`;
+                    const t = this.totalWorkDurationTotals;
+                    return `${t.years} yr${t.years === 1 ? '' : 's'}, ${t.months} mo${t.months === 1 ? '' : 's'}, ${t.days} day${t.days === 1 ? '' : 's'}`;
+                },
+
+                get presentReferenceDate() {
+                    if (this.dateAccomplished) {
+                        const m = String(this.dateAccomplished).trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                        if (m) {
+                            const dt = new Date(parseInt(m[1], 10), parseInt(m[2], 10) - 1, parseInt(m[3], 10));
+                            dt.setHours(0, 0, 0, 0);
+                            if (!Number.isNaN(dt.getTime())) {
+                                return dt;
+                            }
+                        }
+                    }
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    return today;
+                },
+
+                formatIsoToDMY(iso) {
+                    const m = String(iso || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                    if (!m) return iso || '';
+                    return `${m[3]}/${m[2]}/${m[1]}`;
+                },
+
+                recomputeAllPresentWorkRows() {
+                    this.workExperiences.forEach(item => {
+                        if (item.date_from) {
+                            this.recomputeRowYears(item);
+                        }
+                    });
                 },
 
                 generateId(prefix = 'row') {
@@ -1835,7 +1944,8 @@
                         gov_service: prefill.gov_service ?? 'N',
                         duration_years: prefill.duration_years !== undefined ? Math.max(0, parseInt(prefill.duration_years, 10) || 0) : dur.years,
                         duration_months: prefill.duration_months !== undefined ? Math.max(0, parseInt(prefill.duration_months, 10) || 0) : dur.months,
-                        computed_years: Number(((dur.years * 12 + dur.months) / 12).toFixed(1)),
+                        duration_days: prefill.duration_days !== undefined ? Math.max(0, parseInt(prefill.duration_days, 10) || 0) : dur.days,
+                        computed_years: Number(((dur.years * 365.25 + dur.months * 30.4375 + dur.days) / 365.25).toFixed(1)),
                         included: prefill.included ?? true,
                         editing: Boolean(openEditor)
                     };
@@ -1850,41 +1960,52 @@
                 normalizeRowDuration(item) {
                     let y = parseInt(item.duration_years, 10);
                     let m = parseInt(item.duration_months, 10);
+                    let d = parseInt(item.duration_days, 10);
                     if (!Number.isFinite(y) || y < 0) y = 0;
                     if (!Number.isFinite(m) || m < 0) m = 0;
+                    if (!Number.isFinite(d) || d < 0) d = 0;
+                    if (d >= 30) {
+                        m += Math.floor(d / 30);
+                        d = d % 30;
+                    }
                     if (m >= 12) {
                         y += Math.floor(m / 12);
                         m = m % 12;
                     }
                     item.duration_years = y;
                     item.duration_months = m;
-                    item.computed_years = Number(((y * 12 + m) / 12).toFixed(1));
+                    item.duration_days = d;
+                    item.computed_years = Number(((y * 365.25 + m * 30.4375 + d) / 365.25).toFixed(1));
                 },
 
                 decimalYearsToYM(decimalYears) {
                     const num = parseFloat(decimalYears);
                     if (!Number.isFinite(num) || num <= 0) {
-                        return { years: 0, months: 0 };
+                        return { years: 0, months: 0, days: 0 };
                     }
-                    const totalMonths = Math.round(num * 12);
-                    return {
-                        years: Math.floor(totalMonths / 12),
-                        months: totalMonths % 12
-                    };
+                    const totalDays = Math.round(num * 365.25);
+                    const years = Math.floor(totalDays / 365);
+                    const remDays = totalDays % 365;
+                    const months = Math.floor(remDays / 30);
+                    const days = remDays % 30;
+                    return { years, months, days };
                 },
 
                 recomputeRowYears(item) {
                     const dur = this.computeDurationBetween(item.date_from, item.date_to, item.computed_years);
                     item.duration_years = dur.years;
                     item.duration_months = dur.months;
-                    item.computed_years = Number(((dur.years * 12 + dur.months) / 12).toFixed(1));
+                    item.duration_days = dur.days;
+                    item.computed_years = Number(((dur.years * 365.25 + dur.months * 30.4375 + dur.days) / 365.25).toFixed(1));
                 },
 
                 /**
-                 * Exact Inclusive Calendar Duration (Years & Months):
-                 * - Adds +1 day to end date so full calendar spans (e.g. 01/01/2024 to 12/31/2024 = 1 yr 0 mos,
-                 *   04/01/2021 to 06/30/2021 = 0 yrs 3 mos, 01/01/2024 to 11/30/2024 = 0 yrs 11 mos) are exact.
-                 * - Remaining days >= 15 count as +1 month (standard HR half-month rounding), carrying 12 mos -> +1 yr.
+                 * Exact Inclusive Calendar Duration (Years, Months, Days):
+                 * - Uses PDS "Date Accomplished" (if set) as the exact cut-off date for "PRESENT".
+                 * - Adds +1 day to end date so inclusive spans are 100% calendar-exact:
+                 *   e.g. 01/01/2025 to 05/01/2026 = 1 yr, 0 mos, 5 days;
+                 *        01/01/2024 to 31/12/2024 = 1 yr, 0 mos, 0 days;
+                 *        01/04/2021 to 30/06/2021 = 0 yrs, 3 mos, 0 days.
                  */
                 computeDurationBetween(dateFromStr, dateToStr, fallbackDecimal = 0.0) {
                     const start = this.parseDMY(dateFromStr);
@@ -1895,14 +2016,13 @@
                     let end = null;
                     const cleanTo = String(dateToStr || '').trim().toUpperCase();
                     if (['PRESENT', 'TO DATE', 'CURRENT', 'NOW', 'ONGOING'].includes(cleanTo)) {
-                        end = new Date();
-                        end.setHours(0, 0, 0, 0);
+                        end = this.presentReferenceDate;
                     } else {
                         end = this.parseDMY(dateToStr);
                     }
 
                     if (!end || end < start) {
-                        return { years: 0, months: 0 };
+                        return { years: 0, months: 0, days: 0 };
                     }
 
                     const endInc = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
@@ -1920,23 +2040,16 @@
                         months += 12;
                     }
 
-                    if (days >= 15) {
-                        months += 1;
-                        if (months >= 12) {
-                            years += 1;
-                            months -= 12;
-                        }
-                    }
-
                     return {
                         years: Math.max(0, years),
-                        months: Math.max(0, months)
+                        months: Math.max(0, months),
+                        days: Math.max(0, days)
                     };
                 },
 
                 computeYearsBetween(dateFromStr, dateToStr, fallback = 0.0) {
                     const dur = this.computeDurationBetween(dateFromStr, dateToStr, fallback);
-                    return Number(((dur.years * 12 + dur.months) / 12).toFixed(1));
+                    return Number(((dur.years * 365.25 + dur.months * 30.4375 + dur.days) / 365.25).toFixed(1));
                 },
 
                 get isDocumentMdyOrder() {
@@ -2144,6 +2257,7 @@
                     this.applicantName = '';
                     this.targetPosition = '';
                     this.uploadedFileName = '';
+                    this.dateAccomplished = '';
                     if (this.rawPdfObjectUrl) {
                         URL.revokeObjectURL(this.rawPdfObjectUrl);
                     }
@@ -2269,6 +2383,7 @@
                         this.trainings = [];
                         this.workExperiences = [];
                         this.applicantName = '';
+                        this.dateAccomplished = '';
                         this.convertedRawText = '';
                         this.showConvertedText = false;
                         this.previewPageImages = [];
@@ -2390,6 +2505,10 @@
                                 if (localParsed.applicant_name && (!this.appendOnScan || !this.applicantName.trim())) {
                                     this.applicantName = localParsed.applicant_name;
                                 }
+                                const detectedLocalDateAcc = this.extractDateAccomplishedFromText(combinedLocalText);
+                                if (detectedLocalDateAcc && (!this.appendOnScan || !this.dateAccomplished)) {
+                                    this.dateAccomplished = detectedLocalDateAcc;
+                                }
                                 this.applyExtractedRows(localParsed.trainings, localParsed.work_experience);
                                 this.scanNotice = {
                                     type: 'info',
@@ -2437,6 +2556,10 @@
                             if (fallbackCount > 0) {
                                 if (fallbackParsed.applicant_name && (!this.appendOnScan || !this.applicantName.trim())) {
                                     this.applicantName = fallbackParsed.applicant_name;
+                                }
+                                const detectedFbDateAcc = this.extractDateAccomplishedFromText(this.convertedRawText || fullExtractedText);
+                                if (detectedFbDateAcc && (!this.appendOnScan || !this.dateAccomplished)) {
+                                    this.dateAccomplished = detectedFbDateAcc;
                                 }
                                 this.applyExtractedRows(fallbackParsed.trainings, fallbackParsed.work_experience);
                                 this.scanNotice = {
@@ -2566,12 +2689,16 @@
                         } else if (isPurePage1 && pageLines.length > 0) {
                             allLines.push(`=== PDF PAGE 1 HEADER (NAME ONLY) ===`);
                             allLines.push(...pageLines.slice(0, 18));
+                        } else if (isPurePage4 && pageLines.length > 0) {
+                            allLines.push(`=== PDF PAGE ${pageNum} FOOTER (DATE ACCOMPLISHED) ===`);
+                            allLines.push(...pageLines.slice(-28));
                         }
 
+                        const isLastPage = pageNum === numPages;
                         const shouldRenderPageImage =
                             this.scanEngine === 'gemini'
-                                ? isCandidatePage
-                                : (pageChars < 180 || (isCandidatePage && renderedPageBlobs.length < 4));
+                                ? (isCandidatePage || isLastPage)
+                                : (pageChars < 180 || ((isCandidatePage || isLastPage) && renderedPageBlobs.length < 4));
 
                         if (shouldRenderPageImage && renderedPageBlobs.length < 5) {
                             this.scanSubStatus = `Rendering page ${pageNum} of ${numPages}...`;
@@ -3378,6 +3505,83 @@
                     return `${dd}/${mm}/${yyyy}`;
                 },
 
+                extractDateAccomplishedFromText(rawText) {
+                    if (!rawText) return '';
+                    const months = {
+                        JAN: '01', JANUARY: '01',
+                        FEB: '02', FEBRUARY: '02',
+                        MAR: '03', MARCH: '03',
+                        APR: '04', APRIL: '04',
+                        MAY: '05',
+                        JUN: '06', JUNE: '06',
+                        JUL: '07', JULY: '07',
+                        AUG: '08', AUGUST: '08',
+                        SEP: '09', SEPT: '09', SEPTEMBER: '09',
+                        OCT: '10', OCTOBER: '10',
+                        NOV: '11', NOVEMBER: '11',
+                        DEC: '12', DECEMBER: '12'
+                    };
+
+                    const parseFlexibleDate = (str) => {
+                        const s = String(str || '').trim();
+                        if (!s) return '';
+
+                        // 1. DD MONTH YYYY (e.g. "05 JANUARY 2026", "5 Jan 2026")
+                        let m = s.match(/\b(\d{1,2})\s+([A-Z]{3,9})\.?\s*,?\s*(\d{4})\b/i);
+                        if (m && months[m[2].toUpperCase()]) {
+                            const dd = String(parseInt(m[1], 10)).padStart(2, '0');
+                            const mm = months[m[2].toUpperCase()];
+                            return `${m[3]}-${mm}-${dd}`;
+                        }
+
+                        // 2. MONTH DD, YYYY (e.g. "JANUARY 05, 2026", "Jan. 5 2026")
+                        m = s.match(/\b([A-Z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{4})\b/i);
+                        if (m && months[m[1].toUpperCase()]) {
+                            const dd = String(parseInt(m[2], 10)).padStart(2, '0');
+                            const mm = months[m[1].toUpperCase()];
+                            return `${m[3]}-${mm}-${dd}`;
+                        }
+
+                        // 3. ISO YYYY-MM-DD
+                        m = s.match(/\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/);
+                        if (m) {
+                            return `${m[1]}-${String(parseInt(m[2], 10)).padStart(2, '0')}-${String(parseInt(m[3], 10)).padStart(2, '0')}`;
+                        }
+
+                        // 4. Numeric DD/MM/YYYY or MM/DD/YYYY
+                        m = s.match(/\b(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})\b/);
+                        if (m) {
+                            const dt = this.parseDMY(m[1]);
+                            if (dt) {
+                                const yyyy = dt.getFullYear();
+                                const mm = String(dt.getMonth() + 1).padStart(2, '0');
+                                const dd = String(dt.getDate()).padStart(2, '0');
+                                return `${yyyy}-${mm}-${dd}`;
+                            }
+                        }
+
+                        return '';
+                    };
+
+                    const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                    for (let i = 0; i < lines.length; i++) {
+                        if (/DATE\s*ACCOMPLISHED/i.test(lines[i])) {
+                            // Check same line, line directly above (CS Form 212 puts value right above "Date Accomplished"), or line directly below
+                            const candidates = [
+                                lines[i],
+                                i > 0 ? lines[i - 1] : '',
+                                i + 1 < lines.length ? lines[i + 1] : '',
+                                i > 1 ? lines[i - 2] : ''
+                            ];
+                            for (const c of candidates) {
+                                const parsed = parseFlexibleDate(c);
+                                if (parsed) return parsed;
+                            }
+                        }
+                    }
+                    return '';
+                },
+
                 /**
                  * Send all extracted text + rendered multi-page images to POST /api/scan-pds.
                  */
@@ -3426,6 +3630,12 @@
 
                     if (detectedName && (!this.appendOnScan || !this.applicantName.trim())) {
                         this.applicantName = detectedName;
+                    }
+
+                    const detectedDateAcc = String(result.data?.date_accomplished || '').trim()
+                        || this.extractDateAccomplishedFromText(extractedText);
+                    if (detectedDateAcc && (!this.appendOnScan || !this.dateAccomplished)) {
+                        this.dateAccomplished = detectedDateAcc;
                     }
 
                     // If AI missed a section that our local parser found, merge it in!
@@ -3478,7 +3688,8 @@
                             gov_service: row.gov_service === 'Y' ? 'Y' : 'N',
                             duration_years: dur.years,
                             duration_months: dur.months,
-                            computed_years: Number(((dur.years * 12 + dur.months) / 12).toFixed(1)),
+                            duration_days: dur.days,
+                            computed_years: Number(((dur.years * 365.25 + dur.months * 30.4375 + dur.days) / 365.25).toFixed(1)),
                             included: false,
                             editing: false
                         };
@@ -3497,14 +3708,15 @@
                         this.workExperiences = mappedWork;
                     }
 
-                    // Recalculate work experience Years & Months with document-level date format detection (dd/mm/yyyy vs mm/dd/yyyy)
+                    // Recalculate work experience Years, Months & Days with document-level date format detection (dd/mm/yyyy vs mm/dd/yyyy)
                     this.workExperiences.forEach(w => {
                         if (w.date_from) {
                             this.recomputeRowYears(w);
-                        } else if (w.duration_years === undefined || w.duration_months === undefined) {
+                        } else if (w.duration_years === undefined || w.duration_months === undefined || w.duration_days === undefined) {
                             const dur = this.decimalYearsToYM(w.computed_years ?? 0);
                             w.duration_years = dur.years;
                             w.duration_months = dur.months;
+                            w.duration_days = dur.days;
                         }
                     });
 
@@ -3544,6 +3756,7 @@
                             applicantName: this.applicantName,
                             targetPosition: this.targetPosition,
                             uploadedFileName: this.uploadedFileName,
+                            dateAccomplished: this.dateAccomplished,
                             scanEngine: this.scanEngine,
                             trainings: this.trainings.map(t => ({ ...t, editing: false })),
                             workExperiences: this.workExperiences.map(w => ({ ...w, editing: false }))
@@ -3571,6 +3784,7 @@
                             this.applicantName = parsed.applicantName || '';
                             this.targetPosition = parsed.targetPosition || '';
                             this.uploadedFileName = parsed.uploadedFileName || '';
+                            this.dateAccomplished = parsed.dateAccomplished || '';
                             this.previewPageImages = Array.isArray(parsed.previewPageImages) ? parsed.previewPageImages : [];
                             if (['hybrid', 'local', 'gemini'].includes(parsed.scanEngine)) {
                                 this.scanEngine = parsed.scanEngine;
@@ -3587,10 +3801,11 @@
                             this.workExperiences.forEach(w => {
                                 if (w.date_from) {
                                     this.recomputeRowYears(w);
-                                } else if (w.duration_years === undefined || w.duration_months === undefined) {
+                                } else if (w.duration_years === undefined || w.duration_months === undefined || w.duration_days === undefined) {
                                     const dur = this.decimalYearsToYM(w.computed_years ?? 0);
                                     w.duration_years = dur.years;
                                     w.duration_months = dur.months;
+                                    w.duration_days = dur.days;
                                 } else {
                                     this.normalizeRowDuration(w);
                                 }

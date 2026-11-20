@@ -330,9 +330,26 @@ class GeminiPDSService
 
         return [
             'applicant_name' => trim((string) ($decoded['applicant_name'] ?? '')),
+            'date_accomplished' => $this->normalizeDateAccomplished((string) ($decoded['date_accomplished'] ?? '')),
             'work_experience' => $this->normalizeWorkExperience($decoded['work_experience'] ?? []),
             'trainings' => $this->normalizeTrainings($decoded['trainings'] ?? []),
         ];
+    }
+
+    private function normalizeDateAccomplished(string $raw): string
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return '';
+        }
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
+            return $raw;
+        }
+        try {
+            return Carbon::parse($raw)->format('Y-m-d');
+        } catch (Throwable) {
+            return '';
+        }
     }
 
     /**
@@ -347,8 +364,9 @@ STRICT MULTI-PAGE EXTRACTION & PRIVACY RULES:
 1. A PDS document often spans multiple pages where:
    - Section V (Item 28: WORK EXPERIENCE) is typically on Page 2 (or a continuation sheet).
    - Section VII (Item 30: LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS / TRAINING PROGRAMS ATTENDED) is typically on Page 3 (or a continuation sheet).
-   You MUST inspect ALL provided pages/images and text blocks and extract EVERY row from BOTH Section V and Section VII.
-2. Extract the applicant's full name ("applicant_name", e.g., "DELA CRUZ, JUAN SANTOS" or "JUAN S. DELA CRUZ") if visible anywhere in the document (such as Section I Surname/First Name/Middle Name or page headers/footers). Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, family background, or legal questionnaire answers.
+   - "Date Accomplished" is typically on the last page (Page 4) right above/below the "Date Accomplished" box under the applicant's signature (e.g., "05 JANUARY 2026", "January 5, 2026", "05/01/2026").
+   You MUST inspect ALL provided pages/images and text blocks and extract EVERY row from BOTH Section V and Section VII, plus "date_accomplished" if visible.
+2. Extract the applicant's full name ("applicant_name", e.g., "DELA CRUZ, JUAN SANTOS" or "JUAN S. DELA CRUZ") if visible anywhere in the document (such as Section I Surname/First Name/Middle Name or page headers/footers), and "date_accomplished" formatted strictly as "YYYY-MM-DD" (e.g., "2026-01-05") if clearly readable on Page 4 (otherwise empty string ""). Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, family background, or legal questionnaire answers.
 3. Ignore blank placeholder rows or rows labeled "N/A", "NONE", or "(Continue on separate sheet if necessary)".
 4. Format all dates strictly as "dd/mm/yyyy" (e.g., "13/01/2026", "24/10/2022").
    - If a work experience "To" date says "PRESENT", "TO DATE", or "CURRENT", output "PRESENT" in uppercase.
@@ -359,7 +377,7 @@ STRICT MULTI-PAGE EXTRACTION & PRIVACY RULES:
    - "date_to": End date in "dd/mm/yyyy" or "PRESENT".
    - "status_of_appointment": Status of appointment (e.g., "PERMANENT", "COSW", "INTERNSHIP", "PROJECT-BASED", "CONTRACTUAL", "CASUAL", "JOB ORDER").
    - "gov_service": "Y" if Government Service is Yes/Y, otherwise "N".
-   - "computed_years": Decimal years between date_from and date_to (using {$todayFormatted} when date_to is "PRESENT"), rounded to 1 decimal place.
+   - "computed_years": Decimal years between date_from and date_to (using date_accomplished if found, or {$todayFormatted} when date_to is "PRESENT"), rounded to 1 decimal place.
 6. For each Learning & Development / Training item (Section VII / Item 30):
    - "training_title": Full title of learning and development intervention or training program (e.g., "PUBLIC SERVICE EXCELLENCE FORUM", "RA 9184 GOVERNMENT PROCUREMENT REFORM ACT").
    - "date_from": Inclusive start date in "dd/mm/yyyy".
@@ -383,6 +401,10 @@ PROMPT;
                 'applicant_name' => [
                     'type' => 'STRING',
                     'description' => 'Full name of the PDS owner/applicant if visible in the document, otherwise empty string',
+                ],
+                'date_accomplished' => [
+                    'type' => 'STRING',
+                    'description' => 'PDS Date Accomplished on Page 4 formatted as YYYY-MM-DD (e.g. 2026-01-05), or empty string if not visible or unreadable',
                 ],
                 'work_experience' => [
                     'type' => 'ARRAY',
