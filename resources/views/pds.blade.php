@@ -449,12 +449,12 @@
                                 :class="activeLeftTab === 'trainings'
                                     ? 'bg-white text-slate-900 font-semibold border-b-2 border-b-blue-600'
                                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'"
-                                class="px-3 py-2.5 text-xs flex items-center justify-center gap-2 border-r border-slate-300 transition whitespace-nowrap"
+                                class="px-2 py-2.5 text-xs flex items-center justify-center gap-1.5 border-r border-slate-300 transition whitespace-nowrap"
                             >
                                 <span>Trainings</span>
                                 <span
                                     :class="activeLeftTab === 'trainings' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-300'"
-                                    class="font-mono text-[11px] tabular-nums px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap"
+                                    class="font-mono text-[10px] tabular-nums px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap"
                                     x-text="selectedTrainings.length + '/' + trainings.length + ' • ' + formattedTotalTrainingHours + ' hrs'"
                                 ></span>
                             </button>
@@ -465,13 +465,13 @@
                                 :class="activeLeftTab === 'work'
                                     ? 'bg-white text-slate-900 font-semibold border-b-2 border-b-blue-600'
                                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'"
-                                class="px-3 py-2.5 text-xs flex items-center justify-center gap-2 transition whitespace-nowrap"
+                                class="px-2 py-2.5 text-xs flex items-center justify-center gap-1.5 transition whitespace-nowrap"
                             >
                                 <span>Work Experience</span>
                                 <span
                                     :class="activeLeftTab === 'work' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-300'"
-                                    class="font-mono text-[11px] tabular-nums px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap"
-                                    x-text="selectedWorkExperiences.length + '/' + workExperiences.length + ' • ' + formattedTotalWorkYears + ' yrs'"
+                                    class="font-mono text-[10px] tabular-nums px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap"
+                                    x-text="selectedWorkExperiences.length + '/' + workExperiences.length + ' • ' + formattedTotalWorkDurationShort"
                                 ></span>
                             </button>
                         </div>
@@ -597,16 +597,20 @@
                                     <template x-for="(item, index) in trainings" :key="item.id">
                                         <div x-show="matchesTrainingFilter(item)">
 
-                                            <!-- 1. SELECTION ROW -->
+                                            <!-- 1. SELECTION ROW (CLICK OR DRAG TO RIGHT TABLE) -->
                                             <div
                                                 x-show="!item.editing"
-                                                @click="item.included = !item.included"
-                                                :class="item.included
-                                                    ? 'bg-blue-50/75 hover:bg-blue-50'
-                                                    : 'bg-white hover:bg-slate-50'"
-                                                class="px-3.5 py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                                                @pointerdown="onRowPointerDown($event, 'training', item)"
+                                                @click="onRowClick(item)"
+                                                :class="[
+                                                    item.included ? 'bg-blue-50/75 hover:bg-blue-50' : 'bg-white hover:bg-slate-50',
+                                                    pointerDrag.active && pointerDrag.id === item.id ? 'opacity-45 bg-slate-100' : ''
+                                                ]"
+                                                class="px-3 py-2.5 flex items-center justify-between gap-2.5 cursor-grab active:cursor-grabbing select-none transition-colors"
+                                                title="Click to toggle or drag to Relevant Training table"
                                             >
-                                                <div class="flex items-start gap-2.5 min-w-0 flex-1">
+                                                <div class="flex items-start gap-2 min-w-0 flex-1">
+                                                    <span class="mt-0.5 text-slate-300 hover:text-slate-500 text-xs leading-none select-none shrink-0 font-mono" aria-hidden="true">⋮⋮</span>
                                                     <input
                                                         type="checkbox"
                                                         x-model="item.included"
@@ -789,16 +793,20 @@
                                     <template x-for="(item, index) in workExperiences" :key="item.id">
                                         <div x-show="matchesWorkFilter(item)">
 
-                                            <!-- 1. SELECTION ROW -->
+                                            <!-- 1. SELECTION ROW (CLICK OR DRAG TO RIGHT TABLE) -->
                                             <div
                                                 x-show="!item.editing"
-                                                @click="item.included = !item.included"
-                                                :class="item.included
-                                                    ? 'bg-blue-50/75 hover:bg-blue-50'
-                                                    : 'bg-white hover:bg-slate-50'"
-                                                class="px-3.5 py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                                                @pointerdown="onRowPointerDown($event, 'work', item)"
+                                                @click="onRowClick(item)"
+                                                :class="[
+                                                    item.included ? 'bg-blue-50/75 hover:bg-blue-50' : 'bg-white hover:bg-slate-50',
+                                                    pointerDrag.active && pointerDrag.id === item.id ? 'opacity-45 bg-slate-100' : ''
+                                                ]"
+                                                class="px-3 py-2.5 flex items-center justify-between gap-2.5 cursor-grab active:cursor-grabbing select-none transition-colors"
+                                                title="Click to toggle or drag to Relevant Work Experience table"
                                             >
-                                                <div class="flex items-start gap-2.5 min-w-0 flex-1">
+                                                <div class="flex items-start gap-2 min-w-0 flex-1">
+                                                    <span class="mt-0.5 text-slate-300 hover:text-slate-500 text-xs leading-none select-none shrink-0 font-mono" aria-hidden="true">⋮⋮</span>
                                                     <input
                                                         type="checkbox"
                                                         x-model="item.included"
@@ -822,7 +830,7 @@
                                                     </div>
                                                 </div>
 
-                                                <!-- Right Side: Direct Years Input + Edit/Delete -->
+                                                <!-- Right Side: Direct Years & Months Inputs + Edit/Delete -->
                                                 <div class="flex items-center gap-1.5 shrink-0" @click.stop>
                                                     <div
                                                         :class="item.included ? 'border-blue-300 bg-white' : 'border-slate-200 bg-slate-50'"
@@ -830,13 +838,25 @@
                                                     >
                                                         <input
                                                             type="number"
-                                                            step="0.1"
+                                                            step="1"
                                                             min="0"
-                                                            x-model.number="item.computed_years"
-                                                            class="w-10 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
-                                                            title="Edit Computed Years"
+                                                            x-model.number="item.duration_years"
+                                                            @change="normalizeRowDuration(item)"
+                                                            class="w-7 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
+                                                            title="Edit Years"
                                                         >
-                                                        <span class="ml-1 text-[10px] font-mono text-slate-500">yrs</span>
+                                                        <span class="ml-0.5 text-[10px] font-mono text-slate-500">y</span>
+                                                        <span class="mx-1 text-slate-300">|</span>
+                                                        <input
+                                                            type="number"
+                                                            step="1"
+                                                            min="0"
+                                                            x-model.number="item.duration_months"
+                                                            @change="normalizeRowDuration(item)"
+                                                            class="w-7 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
+                                                            title="Edit Months (0–11)"
+                                                        >
+                                                        <span class="ml-0.5 text-[10px] font-mono text-slate-500">m</span>
                                                     </div>
 
                                                     <button
@@ -928,16 +948,30 @@
                                                     </div>
                                                 </div>
 
-                                                <div class="flex items-center justify-between pt-1">
-                                                    <div class="flex items-center gap-2">
-                                                        <label class="text-[10px] font-semibold uppercase text-slate-500">Years:</label>
-                                                        <input
-                                                            type="number"
-                                                            step="0.1"
-                                                            min="0"
-                                                            x-model.number="item.computed_years"
-                                                            class="w-20 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
-                                                        >
+                                                <div class="flex flex-wrap items-center justify-between gap-2 pt-1">
+                                                    <div class="flex flex-wrap items-center gap-2">
+                                                        <div class="flex items-center gap-1">
+                                                            <label class="text-[10px] font-semibold uppercase text-slate-500">Years:</label>
+                                                            <input
+                                                                type="number"
+                                                                step="1"
+                                                                min="0"
+                                                                x-model.number="item.duration_years"
+                                                                @change="normalizeRowDuration(item)"
+                                                                class="w-14 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                            >
+                                                        </div>
+                                                        <div class="flex items-center gap-1">
+                                                            <label class="text-[10px] font-semibold uppercase text-slate-500">Months:</label>
+                                                            <input
+                                                                type="number"
+                                                                step="1"
+                                                                min="0"
+                                                                x-model.number="item.duration_months"
+                                                                @change="normalizeRowDuration(item)"
+                                                                class="w-14 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                            >
+                                                        </div>
                                                         <button
                                                             type="button"
                                                             @click="recomputeRowYears(item)"
@@ -1021,13 +1055,30 @@
                         </div>
 
                         <!-- =================================================== -->
-                        <!-- TABLE I: RELEVANT TRAINING                          -->
+                        <!-- TABLE I: RELEVANT TRAINING (DROP ZONE)              -->
                         <!-- =================================================== -->
-                        <div>
+                        <div
+                            x-ref="trainingDropZone"
+                            :class="dragOverTarget === 'training'
+                                ? 'border-2 border-dashed border-blue-600 bg-blue-50/70 rounded-lg p-3 -m-3 shadow-sm transition-all'
+                                : (pointerDrag.active && pointerDrag.type === 'training'
+                                    ? 'border-2 border-dashed border-blue-300 bg-blue-50/25 rounded-lg p-3 -m-3 transition-all'
+                                    : 'border-2 border-transparent transition-all')"
+                        >
                             <div class="flex items-baseline justify-between mb-2">
-                                <h3 class="text-xs font-bold uppercase tracking-wide text-slate-900">
-                                    Relevant Training
-                                </h3>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-900">
+                                        Relevant Training
+                                    </h3>
+                                    <span
+                                        x-show="pointerDrag.active && pointerDrag.type === 'training'"
+                                        x-cloak
+                                        :class="dragOverTarget === 'training' ? 'bg-blue-600 text-white shadow-xs' : 'bg-blue-100 text-blue-700 border border-blue-200'"
+                                        class="no-print px-2 py-0.5 text-[10px] font-semibold rounded transition-all"
+                                    >
+                                        <span x-text="dragOverTarget === 'training' ? '+ Release to add training' : 'Drop here to include'"></span>
+                                    </span>
+                                </div>
                                 <span class="no-print text-[11px] font-mono text-slate-500 tabular-nums">
                                     <span x-text="selectedTrainings.length"></span> item(s) included
                                 </span>
@@ -1036,26 +1087,27 @@
                             <table class="w-full table-fixed border-collapse border border-slate-400 text-xs print-table">
                                 <thead>
                                     <tr class="bg-slate-100 text-slate-900">
-                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[5%]">#</th>
-                                        <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold w-[33%]">Title of Learning &amp; Development / Training</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[19%]">Conducted / Sponsored By</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[22%]">Inclusive Dates (From – To)</th>
-                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[12%]">Type</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold w-[9%]">Hours</th>
+                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[4%]">#</th>
+                                        <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold w-[30%]">Title of Learning &amp; Development / Training</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[18%]">Conducted / Sponsored By</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[21%]">Inclusive Dates (From – To)</th>
+                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[11%]">Type</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold w-[8%]">Hours</th>
+                                        <th class="no-print border border-slate-400 px-1 py-1.5 text-center font-semibold w-[8%]">Copy</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template x-if="selectedTrainings.length === 0">
                                         <tr>
-                                            <td colspan="6" class="border border-slate-400 px-3 py-4 text-center text-slate-400">
-                                                No relevant training items selected.
+                                            <td colspan="7" class="border border-slate-400 px-3 py-5 text-center text-slate-400">
+                                                <span x-text="pointerDrag.active && pointerDrag.type === 'training' ? 'Release mouse to add this training here.' : 'No relevant training items selected. Check or drag items from the left.'"></span>
                                             </td>
                                         </tr>
                                     </template>
 
                                     <template x-for="(item, idx) in selectedTrainings" :key="item.id">
-                                        <tr>
-                                            <td class="border border-slate-400 px-1.5 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
+                                        <tr :class="justDroppedId === item.id ? 'bg-blue-100/80 transition-colors duration-500' : 'transition-colors duration-500'">
+                                            <td class="border border-slate-400 px-1 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
                                             <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900 break-words" x-text="item.training_title || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-slate-700 break-words" x-text="item.conducted_by || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums break-words">
@@ -1063,6 +1115,20 @@
                                             </td>
                                             <td class="border border-slate-400 px-1.5 py-1.5 text-center text-[11px] text-slate-700 break-words" x-text="item.type_of_ld || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums" x-text="formatHours(item.hours)"></td>
+                                            <td class="no-print border border-slate-400 px-1 py-1 text-center align-middle">
+                                                <button
+                                                    type="button"
+                                                    @click="copyTitleToClipboard(item.training_title, item.id)"
+                                                    :disabled="!item.training_title"
+                                                    :class="copiedRowId === item.id
+                                                        ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                                        : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:text-slate-900'"
+                                                    class="inline-flex items-center justify-center px-1.5 py-0.5 text-[10px] font-semibold border rounded transition disabled:opacity-40 whitespace-nowrap"
+                                                    title="Copy training title to clipboard"
+                                                >
+                                                    <span x-text="copiedRowId === item.id ? 'Copied ✓' : 'Copy'"></span>
+                                                </button>
+                                            </td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -1074,19 +1140,37 @@
                                         <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums">
                                             <span x-text="formattedTotalTrainingHours"></span>
                                         </td>
+                                        <td class="no-print border border-slate-400 px-1 py-2"></td>
                                     </tr>
                                 </tfoot>
                             </table>
                         </div>
 
                         <!-- =================================================== -->
-                        <!-- TABLE II: RELEVANT WORK EXPERIENCE                  -->
+                        <!-- TABLE II: RELEVANT WORK EXPERIENCE (DROP ZONE)      -->
                         <!-- =================================================== -->
-                        <div>
+                        <div
+                            x-ref="workDropZone"
+                            :class="dragOverTarget === 'work'
+                                ? 'border-2 border-dashed border-blue-600 bg-blue-50/70 rounded-lg p-3 -m-3 shadow-sm transition-all'
+                                : (pointerDrag.active && pointerDrag.type === 'work'
+                                    ? 'border-2 border-dashed border-blue-300 bg-blue-50/25 rounded-lg p-3 -m-3 transition-all'
+                                    : 'border-2 border-transparent transition-all')"
+                        >
                             <div class="flex items-baseline justify-between mb-2">
-                                <h3 class="text-xs font-bold uppercase tracking-wide text-slate-900">
-                                    Relevant Work Experience
-                                </h3>
+                                <div class="flex items-center gap-2">
+                                    <h3 class="text-xs font-bold uppercase tracking-wide text-slate-900">
+                                        Relevant Work Experience
+                                    </h3>
+                                    <span
+                                        x-show="pointerDrag.active && pointerDrag.type === 'work'"
+                                        x-cloak
+                                        :class="dragOverTarget === 'work' ? 'bg-blue-600 text-white shadow-xs' : 'bg-blue-100 text-blue-700 border border-blue-200'"
+                                        class="no-print px-2 py-0.5 text-[10px] font-semibold rounded transition-all"
+                                    >
+                                        <span x-text="dragOverTarget === 'work' ? '+ Release to add experience' : 'Drop here to include'"></span>
+                                    </span>
+                                </div>
                                 <span class="no-print text-[11px] font-mono text-slate-500 tabular-nums">
                                     <span x-text="selectedWorkExperiences.length"></span> position(s) included
                                 </span>
@@ -1095,27 +1179,28 @@
                             <table class="w-full table-fixed border-collapse border border-slate-400 text-xs print-table">
                                 <thead>
                                     <tr class="bg-slate-100 text-slate-900">
-                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[5%]">#</th>
-                                        <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold w-[26%]">Position Title</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[23%]">Department / Agency / Company</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[22%]">Inclusive Dates (From – To)</th>
-                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[15%]">Status / Gov't</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold w-[9%]">Years</th>
+                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[4%]">#</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[24%]">Position Title</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[21%]">Department / Agency / Company</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[20%]">Inclusive Dates (From – To)</th>
+                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[14%]">Status / Gov't</th>
+                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[8%]">Years</th>
+                                        <th class="border border-slate-400 px-1 py-1.5 text-center font-semibold w-[9%]">Months</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <template x-if="selectedWorkExperiences.length === 0">
                                         <tr>
-                                            <td colspan="6" class="border border-slate-400 px-3 py-4 text-center text-slate-400">
-                                                No relevant work experience items selected.
+                                            <td colspan="7" class="border border-slate-400 px-3 py-5 text-center text-slate-400">
+                                                <span x-text="pointerDrag.active && pointerDrag.type === 'work' ? 'Release mouse to add this position here.' : 'No relevant work experience items selected. Check or drag items from the left.'"></span>
                                             </td>
                                         </tr>
                                     </template>
 
                                     <template x-for="(item, idx) in selectedWorkExperiences" :key="item.id">
-                                        <tr>
-                                            <td class="border border-slate-400 px-1.5 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
-                                            <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900 break-words" x-text="item.position_title || '—'"></td>
+                                        <tr :class="justDroppedId === item.id ? 'bg-blue-100/80 transition-colors duration-500' : 'transition-colors duration-500'">
+                                            <td class="border border-slate-400 px-1 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
+                                            <td class="border border-slate-400 px-2 py-1.5 font-medium text-slate-900 break-words" x-text="item.position_title || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-slate-700 break-words" x-text="item.department_agency_company || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums break-words">
                                                 <span x-text="formatDateRange(item.date_from, item.date_to)"></span>
@@ -1123,17 +1208,23 @@
                                             <td class="border border-slate-400 px-1.5 py-1.5 text-center text-[11px] text-slate-700 break-words leading-snug">
                                                 <span x-text="formatStatusGov(item.status_of_appointment, item.gov_service)"></span>
                                             </td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums" x-text="formatYears(item.computed_years)"></td>
+                                            <td class="border border-slate-400 px-1 py-1.5 text-center font-mono font-semibold text-slate-900 tabular-nums" x-text="formatInt(item.duration_years)"></td>
+                                            <td class="border border-slate-400 px-1 py-1.5 text-center font-mono font-semibold text-slate-900 tabular-nums" x-text="formatInt(item.duration_months)"></td>
                                         </tr>
                                     </template>
                                 </tbody>
                                 <tfoot>
                                     <tr class="bg-slate-100 font-bold text-slate-900">
                                         <td colspan="5" class="border border-slate-400 px-2.5 py-2 text-right text-xs">
-                                            Total no. of years
+                                            Total Relevant Experience
                                         </td>
-                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums">
-                                            <span x-text="formattedTotalWorkYears"></span>
+                                        <td class="border border-slate-400 px-1 py-2 text-center font-mono text-xs tabular-nums">
+                                            <span x-text="totalWorkYearsInt"></span>
+                                            <span class="block text-[9px] font-sans font-normal text-slate-500 leading-none mt-0.5" x-text="totalWorkYearsInt === 1 ? 'yr' : 'yrs'"></span>
+                                        </td>
+                                        <td class="border border-slate-400 px-1 py-2 text-center font-mono text-xs tabular-nums">
+                                            <span x-text="totalWorkMonthsInt"></span>
+                                            <span class="block text-[9px] font-sans font-normal text-slate-500 leading-none mt-0.5" x-text="totalWorkMonthsInt === 1 ? 'mo' : 'mos'"></span>
                                         </td>
                                     </tr>
                                 </tfoot>
@@ -1310,6 +1401,39 @@
                 </div>
             </div>
         </div>
+
+        <!-- =============================================================== -->
+        <!-- CRISP ENTERPRISE FLOATING DRAG CARD (ZERO-BLUR POINTER DRAG)    -->
+        <!-- =============================================================== -->
+        <div
+            x-show="pointerDrag.active"
+            x-cloak
+            :style="`transform: translate3d(${pointerDrag.x + 14}px, ${pointerDrag.y - 18}px, 0);`"
+            :class="dragOverTarget === pointerDrag.type
+                ? 'border-blue-600 ring-2 ring-blue-500/20'
+                : 'border-slate-300'"
+            class="no-print fixed top-0 left-0 z-[9999] pointer-events-none bg-white border rounded-md shadow-xl px-3 py-2 w-[300px] max-w-[85vw] transition-colors"
+        >
+            <div class="flex items-start justify-between gap-2">
+                <div class="flex items-start gap-1.5 min-w-0">
+                    <span class="text-blue-600 text-xs leading-none mt-0.5 font-mono shrink-0">⋮⋮</span>
+                    <span class="text-xs font-semibold text-slate-900 leading-snug line-clamp-2 break-words" x-text="pointerDrag.title"></span>
+                </div>
+                <span
+                    class="shrink-0 px-1.5 py-0.5 rounded bg-blue-50 border border-blue-200 text-blue-700 font-mono text-[10px] font-bold tabular-nums"
+                    x-text="pointerDrag.badge"
+                ></span>
+            </div>
+            <div class="mt-1 flex items-center justify-between gap-2 text-[10px] text-slate-500">
+                <span class="truncate" x-text="pointerDrag.meta"></span>
+                <span
+                    x-show="dragOverTarget === pointerDrag.type"
+                    class="shrink-0 font-semibold text-blue-600"
+                >
+                    + Drop to add
+                </span>
+            </div>
+        </div>
     </div>
 
     <!-- ======================================================================= -->
@@ -1345,7 +1469,23 @@
                 trainingSearch: '',
                 workSearch: '',
                 scanEngine: 'hybrid', // 'hybrid' | 'local' | 'gemini'
-                appendOnScan: true,
+                appendOnScan: false,
+                copiedRowId: null,
+                copiedTimerId: null,
+                pointerDrag: {
+                    active: false,
+                    type: null,
+                    id: null,
+                    title: '',
+                    meta: '',
+                    badge: '',
+                    x: 0,
+                    y: 0
+                },
+                suppressNextClick: false,
+                dragOverTarget: null, // 'training' | 'work' | null
+                justDroppedId: null,
+                justDroppedTimerId: null,
                 isDragging: false,
                 isScanning: false,
                 scanningFileName: '',
@@ -1425,6 +1565,145 @@
                     this.showPreviewModal = true;
                 },
 
+                async copyTitleToClipboard(text, rowId) {
+                    const value = String(text || '').trim();
+                    if (!value) return;
+
+                    let copied = false;
+                    try {
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            await navigator.clipboard.writeText(value);
+                            copied = true;
+                        }
+                    } catch (e) {
+                        copied = false;
+                    }
+
+                    if (!copied) {
+                        try {
+                            const ta = document.createElement('textarea');
+                            ta.value = value;
+                            ta.setAttribute('readonly', '');
+                            ta.style.position = 'fixed';
+                            ta.style.opacity = '0';
+                            document.body.appendChild(ta);
+                            ta.select();
+                            document.execCommand('copy');
+                            document.body.removeChild(ta);
+                        } catch (e) {
+                            return;
+                        }
+                    }
+
+                    this.copiedRowId = rowId;
+                    if (this.copiedTimerId) clearTimeout(this.copiedTimerId);
+                    this.copiedTimerId = setTimeout(() => {
+                        if (this.copiedRowId === rowId) {
+                            this.copiedRowId = null;
+                        }
+                    }, 1500);
+                },
+
+                onRowClick(item) {
+                    if (this.suppressNextClick) {
+                        this.suppressNextClick = false;
+                        return;
+                    }
+                    item.included = !item.included;
+                },
+
+                onRowPointerDown(event, type, item) {
+                    // Only left mouse button / primary touch, and ignore interactive controls inside the row
+                    if (event.button !== 0 && event.pointerType === 'mouse') return;
+                    if (event.target && event.target.closest('input, button, select, textarea, a, label')) return;
+
+                    const startX = event.clientX;
+                    const startY = event.clientY;
+                    let dragging = false;
+
+                    const title = type === 'training'
+                        ? (item.training_title || 'Untitled Training')
+                        : (item.position_title || 'Untitled Position');
+                    const badge = type === 'training'
+                        ? `${this.formatHours(item.hours)} hrs`
+                        : `${this.formatInt(item.duration_years)}y ${this.formatInt(item.duration_months)}m`;
+                    const meta = type === 'training'
+                        ? [item.conducted_by, this.formatDateRange(item.date_from, item.date_to)].filter(Boolean).join(' • ')
+                        : [item.department_agency_company, this.formatDateRange(item.date_from, item.date_to)].filter(Boolean).join(' • ');
+
+                    const hitTestDropZone = (cx, cy) => {
+                        const targetEl = type === 'training' ? this.$refs.trainingDropZone : this.$refs.workDropZone;
+                        if (!targetEl) return false;
+                        const rect = targetEl.getBoundingClientRect();
+                        return cx >= rect.left - 16 && cx <= rect.right + 16 && cy >= rect.top - 16 && cy <= rect.bottom + 16;
+                    };
+
+                    const onMove = (moveEvent) => {
+                        const dx = moveEvent.clientX - startX;
+                        const dy = moveEvent.clientY - startY;
+
+                        if (!dragging && Math.hypot(dx, dy) >= 6) {
+                            dragging = true;
+                            this.suppressNextClick = true;
+                            document.body.style.cursor = 'grabbing';
+                            document.body.style.userSelect = 'none';
+                            this.pointerDrag = {
+                                active: true,
+                                type,
+                                id: item.id,
+                                title,
+                                meta,
+                                badge,
+                                x: moveEvent.clientX,
+                                y: moveEvent.clientY
+                            };
+                        }
+
+                        if (dragging) {
+                            this.pointerDrag.x = moveEvent.clientX;
+                            this.pointerDrag.y = moveEvent.clientY;
+                            this.dragOverTarget = hitTestDropZone(moveEvent.clientX, moveEvent.clientY) ? type : null;
+                        }
+                    };
+
+                    const onUp = (upEvent) => {
+                        window.removeEventListener('pointermove', onMove);
+                        window.removeEventListener('pointerup', onUp);
+                        window.removeEventListener('pointercancel', onUp);
+
+                        if (dragging) {
+                            document.body.style.cursor = '';
+                            document.body.style.userSelect = '';
+
+                            const isOverTarget = hitTestDropZone(upEvent.clientX, upEvent.clientY);
+                            if (isOverTarget) {
+                                item.included = true;
+                                this.justDroppedId = item.id;
+                                if (this.justDroppedTimerId) clearTimeout(this.justDroppedTimerId);
+                                this.justDroppedTimerId = setTimeout(() => {
+                                    if (this.justDroppedId === item.id) {
+                                        this.justDroppedId = null;
+                                    }
+                                }, 1200);
+                            }
+
+                            this.pointerDrag.active = false;
+                            this.pointerDrag.id = null;
+                            this.pointerDrag.type = null;
+                            this.dragOverTarget = null;
+
+                            // Clear suppress flag after the browser's synthetic click tick
+                            setTimeout(() => {
+                                this.suppressNextClick = false;
+                            }, 50);
+                        }
+                    };
+
+                    window.addEventListener('pointermove', onMove);
+                    window.addEventListener('pointerup', onUp);
+                    window.addEventListener('pointercancel', onUp);
+                },
+
                 blobToDataUrl(blob) {
                     return new Promise((resolve) => {
                         const reader = new FileReader();
@@ -1470,15 +1749,34 @@
                     return Number.isInteger(total) ? String(total) : total.toFixed(1);
                 },
 
-                get totalWorkYears() {
+                get totalWorkMonthsRaw() {
                     return this.selectedWorkExperiences.reduce((sum, item) => {
-                        const val = parseFloat(item.computed_years);
-                        return sum + (Number.isFinite(val) && val > 0 ? val : 0);
+                        const y = parseInt(item.duration_years, 10);
+                        const m = parseInt(item.duration_months, 10);
+                        const safeY = Number.isFinite(y) && y > 0 ? y : 0;
+                        const safeM = Number.isFinite(m) && m > 0 ? m : 0;
+                        return sum + (safeY * 12) + safeM;
                     }, 0);
                 },
 
+                get totalWorkYearsInt() {
+                    return Math.floor(this.totalWorkMonthsRaw / 12);
+                },
+
+                get totalWorkMonthsInt() {
+                    return this.totalWorkMonthsRaw % 12;
+                },
+
+                get formattedTotalWorkDurationShort() {
+                    return `${this.totalWorkYearsInt}y ${this.totalWorkMonthsInt}m`;
+                },
+
+                get totalWorkYears() {
+                    return Number((this.totalWorkMonthsRaw / 12).toFixed(1));
+                },
+
                 get formattedTotalWorkYears() {
-                    return this.totalWorkYears.toFixed(1);
+                    return `${this.totalWorkYearsInt} yr${this.totalWorkYearsInt === 1 ? '' : 's'}, ${this.totalWorkMonthsInt} mo${this.totalWorkMonthsInt === 1 ? '' : 's'}`;
                 },
 
                 generateId(prefix = 'row') {
@@ -1518,6 +1816,9 @@
 
                 addWorkRow(openEditor = true, prefill = {}) {
                     this.activeLeftTab = 'work';
+                    const dur = prefill.date_from
+                        ? this.computeDurationBetween(prefill.date_from, prefill.date_to ?? 'PRESENT', prefill.computed_years ?? 0)
+                        : this.decimalYearsToYM(prefill.computed_years ?? 0);
                     const row = {
                         id: this.generateId('wk'),
                         position_title: prefill.position_title ?? '',
@@ -1526,13 +1827,13 @@
                         date_to: prefill.date_to ?? 'PRESENT',
                         status_of_appointment: prefill.status_of_appointment ?? 'COSW',
                         gov_service: prefill.gov_service ?? 'N',
-                        computed_years: prefill.computed_years ?? 0.0,
+                        duration_years: prefill.duration_years !== undefined ? Math.max(0, parseInt(prefill.duration_years, 10) || 0) : dur.years,
+                        duration_months: prefill.duration_months !== undefined ? Math.max(0, parseInt(prefill.duration_months, 10) || 0) : dur.months,
+                        computed_years: Number(((dur.years * 12 + dur.months) / 12).toFixed(1)),
                         included: prefill.included ?? true,
                         editing: Boolean(openEditor)
                     };
-                    if (prefill.computed_years === undefined && row.date_from) {
-                        row.computed_years = this.computeYearsBetween(row.date_from, row.date_to, 0.0);
-                    }
+                    this.normalizeRowDuration(row);
                     this.workExperiences.push(row);
                 },
 
@@ -1540,15 +1841,49 @@
                     this.workExperiences.splice(index, 1);
                 },
 
-                recomputeRowYears(item) {
-                    item.computed_years = this.computeYearsBetween(item.date_from, item.date_to, item.computed_years);
+                normalizeRowDuration(item) {
+                    let y = parseInt(item.duration_years, 10);
+                    let m = parseInt(item.duration_months, 10);
+                    if (!Number.isFinite(y) || y < 0) y = 0;
+                    if (!Number.isFinite(m) || m < 0) m = 0;
+                    if (m >= 12) {
+                        y += Math.floor(m / 12);
+                        m = m % 12;
+                    }
+                    item.duration_years = y;
+                    item.duration_months = m;
+                    item.computed_years = Number(((y * 12 + m) / 12).toFixed(1));
                 },
 
-                computeYearsBetween(dateFromStr, dateToStr, fallback = 0.0) {
+                decimalYearsToYM(decimalYears) {
+                    const num = parseFloat(decimalYears);
+                    if (!Number.isFinite(num) || num <= 0) {
+                        return { years: 0, months: 0 };
+                    }
+                    const totalMonths = Math.round(num * 12);
+                    return {
+                        years: Math.floor(totalMonths / 12),
+                        months: totalMonths % 12
+                    };
+                },
+
+                recomputeRowYears(item) {
+                    const dur = this.computeDurationBetween(item.date_from, item.date_to, item.computed_years);
+                    item.duration_years = dur.years;
+                    item.duration_months = dur.months;
+                    item.computed_years = Number(((dur.years * 12 + dur.months) / 12).toFixed(1));
+                },
+
+                /**
+                 * Exact Inclusive Calendar Duration (Years & Months):
+                 * - Adds +1 day to end date so full calendar spans (e.g. 01/01/2024 to 12/31/2024 = 1 yr 0 mos,
+                 *   04/01/2021 to 06/30/2021 = 0 yrs 3 mos, 01/01/2024 to 11/30/2024 = 0 yrs 11 mos) are exact.
+                 * - Remaining days >= 15 count as +1 month (standard HR half-month rounding), carrying 12 mos -> +1 yr.
+                 */
+                computeDurationBetween(dateFromStr, dateToStr, fallbackDecimal = 0.0) {
                     const start = this.parseDMY(dateFromStr);
                     if (!start) {
-                        const num = parseFloat(fallback);
-                        return Number.isFinite(num) ? Number(num.toFixed(1)) : 0.0;
+                        return this.decimalYearsToYM(fallbackDecimal);
                     }
 
                     let end = null;
@@ -1561,12 +1896,41 @@
                     }
 
                     if (!end || end < start) {
-                        return 0.0;
+                        return { years: 0, months: 0 };
                     }
 
-                    const diffMs = end.getTime() - start.getTime();
-                    const inclusiveDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
-                    return Number((inclusiveDays / 365.25).toFixed(1));
+                    const endInc = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
+                    let years = endInc.getFullYear() - start.getFullYear();
+                    let months = endInc.getMonth() - start.getMonth();
+                    let days = endInc.getDate() - start.getDate();
+
+                    if (days < 0) {
+                        months -= 1;
+                        const prevMonthDays = new Date(endInc.getFullYear(), endInc.getMonth(), 0).getDate();
+                        days += prevMonthDays;
+                    }
+                    if (months < 0) {
+                        years -= 1;
+                        months += 12;
+                    }
+
+                    if (days >= 15) {
+                        months += 1;
+                        if (months >= 12) {
+                            years += 1;
+                            months -= 12;
+                        }
+                    }
+
+                    return {
+                        years: Math.max(0, years),
+                        months: Math.max(0, months)
+                    };
+                },
+
+                computeYearsBetween(dateFromStr, dateToStr, fallback = 0.0) {
+                    const dur = this.computeDurationBetween(dateFromStr, dateToStr, fallback);
+                    return Number(((dur.years * 12 + dur.months) / 12).toFixed(1));
                 },
 
                 get isDocumentMdyOrder() {
@@ -1656,6 +2020,12 @@
                     const num = parseFloat(val);
                     if (!Number.isFinite(num) || num < 0) return '0.0';
                     return num.toFixed(1);
+                },
+
+                formatInt(val) {
+                    const num = parseInt(val, 10);
+                    if (!Number.isFinite(num) || num < 0) return '0';
+                    return String(num);
                 },
 
                 loadSamplePDS() {
@@ -1887,11 +2257,31 @@
                  * when they reside on separate pages or mixed text/image pages.
                  */
                 async processDocuments(files) {
+                    // When starting a new PDS upload (Append mode OFF), immediately reset previous applicant's data
+                    // so old rows, owner name, and previews never mix with the newly dropped PDS.
+                    if (!this.appendOnScan) {
+                        this.trainings = [];
+                        this.workExperiences = [];
+                        this.applicantName = '';
+                        this.convertedRawText = '';
+                        this.showConvertedText = false;
+                        this.previewPageImages = [];
+                        this.trainingSearch = '';
+                        this.workSearch = '';
+                        this.showPreviewModal = false;
+                        if (this.rawPdfObjectUrl) {
+                            URL.revokeObjectURL(this.rawPdfObjectUrl);
+                            this.rawPdfObjectUrl = '';
+                        }
+                    }
+
                     this.isScanning = true;
                     this.scanCancelled = false;
                     const fileNamesJoined = files.map(f => f.name).join(', ');
                     this.scanningFileName = files.length === 1 ? files[0].name : `${files.length} files`;
-                    this.uploadedFileName = fileNamesJoined;
+                    this.uploadedFileName = this.appendOnScan && this.uploadedFileName
+                        ? `${this.uploadedFileName}, ${fileNamesJoined}`
+                        : fileNamesJoined;
                     this.scanStageLabel = 'Reading';
                     this.scanSubStatus = 'Inspecting all pages...';
                     this.scanElapsed = 0;
@@ -3064,24 +3454,29 @@
                         hours: Number.isFinite(Number(row.hours)) ? Number(row.hours) : 0,
                         type_of_ld: row.type_of_ld || 'TECHNICAL',
                         conducted_by: row.conducted_by || '',
-                        included: true,
+                        included: false,
                         editing: false
                     }));
 
-                    const mappedWork = rawWork.map(row => ({
-                        id: this.generateId('wk'),
-                        position_title: row.position_title || '',
-                        department_agency_company: row.department_agency_company || '',
-                        date_from: row.date_from || '',
-                        date_to: row.date_to || '',
-                        status_of_appointment: row.status_of_appointment || '',
-                        gov_service: row.gov_service === 'Y' ? 'Y' : 'N',
-                        computed_years: Number.isFinite(Number(row.computed_years))
-                            ? Number(Number(row.computed_years).toFixed(1))
-                            : this.computeYearsBetween(row.date_from, row.date_to, 0.0),
-                        included: true,
-                        editing: false
-                    }));
+                    const mappedWork = rawWork.map(row => {
+                        const dur = row.date_from
+                            ? this.computeDurationBetween(row.date_from, row.date_to, row.computed_years ?? 0)
+                            : this.decimalYearsToYM(row.computed_years ?? 0);
+                        return {
+                            id: this.generateId('wk'),
+                            position_title: row.position_title || '',
+                            department_agency_company: row.department_agency_company || '',
+                            date_from: row.date_from || '',
+                            date_to: row.date_to || '',
+                            status_of_appointment: row.status_of_appointment || '',
+                            gov_service: row.gov_service === 'Y' ? 'Y' : 'N',
+                            duration_years: dur.years,
+                            duration_months: dur.months,
+                            computed_years: Number(((dur.years * 12 + dur.months) / 12).toFixed(1)),
+                            included: false,
+                            editing: false
+                        };
+                    });
 
                     if (this.appendOnScan) {
                         if (mappedTrainings.length > 0) {
@@ -3091,19 +3486,19 @@
                             this.workExperiences = this.deduplicateRows([...this.workExperiences, ...mappedWork], 'position_title');
                         }
                     } else {
-                        // Even when Append is off, only replace a section if the new scan actually contained rows for that section
-                        if (mappedTrainings.length > 0 || mappedWork.length === 0) {
-                            this.trainings = mappedTrainings;
-                        }
-                        if (mappedWork.length > 0 || mappedTrainings.length === 0) {
-                            this.workExperiences = mappedWork;
-                        }
+                        // Replace cleanly with the newly scanned PDS (no leftover rows from a previous applicant)
+                        this.trainings = mappedTrainings;
+                        this.workExperiences = mappedWork;
                     }
 
-                    // Recalculate work experience years with document-level date format detection (dd/mm/yyyy vs mm/dd/yyyy)
+                    // Recalculate work experience Years & Months with document-level date format detection (dd/mm/yyyy vs mm/dd/yyyy)
                     this.workExperiences.forEach(w => {
                         if (w.date_from) {
-                            w.computed_years = this.computeYearsBetween(w.date_from, w.date_to, w.computed_years);
+                            this.recomputeRowYears(w);
+                        } else if (w.duration_years === undefined || w.duration_months === undefined) {
+                            const dur = this.decimalYearsToYM(w.computed_years ?? 0);
+                            w.duration_years = dur.years;
+                            w.duration_months = dur.months;
                         }
                     });
 
@@ -3185,7 +3580,13 @@
                             }
                             this.workExperiences.forEach(w => {
                                 if (w.date_from) {
-                                    w.computed_years = this.computeYearsBetween(w.date_from, w.date_to, w.computed_years);
+                                    this.recomputeRowYears(w);
+                                } else if (w.duration_years === undefined || w.duration_months === undefined) {
+                                    const dur = this.decimalYearsToYM(w.computed_years ?? 0);
+                                    w.duration_years = dur.years;
+                                    w.duration_months = dur.months;
+                                } else {
+                                    this.normalizeRowDuration(w);
                                 }
                             });
                         }
