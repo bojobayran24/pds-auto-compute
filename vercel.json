@@ -10,6 +10,10 @@
     },
     "routes": [
         {
+            "src": "/robots.txt",
+            "dest": "/public/robots.txt"
+        },
+        {
             "src": "/build/(.*)",
             "dest": "/public/build/$1"
         },
@@ -19,7 +23,16 @@
         },
         {
             "src": "/(.*)",
-            "dest": "/api/index.php"
+            "dest": "/api/index.php",
+            "headers": {
+                "Strict-Transport-Security": "max-age=31536000; includeSubDomains; preload",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "SAMEORIGIN",
+                "Referrer-Policy": "no-referrer",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=(), payment=()",
+                "X-Robots-Tag": "noindex, nofollow, noarchive",
+                "Cache-Control": "no-store, no-cache, must-revalidate, private, max-age=0"
+            }
         }
     ],
     "env": {

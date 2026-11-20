@@ -196,9 +196,15 @@
                 </button>
             </form>
 
-            <p class="mt-4 pt-3 border-t border-slate-100 text-[11px] text-slate-500 leading-normal">
-                Session-only workspace. Uploaded files are parsed in memory and never stored on disk or in a database.
-            </p>
+            <div class="mt-4 pt-3 border-t border-slate-100 space-y-1.5">
+                <div class="flex items-center gap-1.5 text-[11px] font-semibold text-emerald-700">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+                    <span>Confidential • Data Privacy Act of 2012 (RA 10173)</span>
+                </div>
+                <p class="text-[11px] text-slate-500 leading-normal">
+                    Session-only workspace. Uploaded PDS files are processed in volatile memory and immediately purged — never saved to a database, server disk, or public log.
+                </p>
+            </div>
         </div>
     </main>
 @else
@@ -221,6 +227,15 @@
                     <span class="hidden sm:inline-block text-xs text-slate-500 truncate">
                         CS Form No. 212 (Revised 2025)
                     </span>
+                    <button
+                        type="button"
+                        @click="showPrivacyModal = true"
+                        class="hidden md:inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-full hover:bg-emerald-100 transition whitespace-nowrap"
+                        title="View Data Privacy & Confidentiality Assurance (RA 10173)"
+                    >
+                        <i data-lucide="shield-check" class="w-3 h-3"></i>
+                        <span>Data Privacy (RA 10173)</span>
+                    </button>
                 </div>
 
                 <div class="flex items-center gap-1.5">
@@ -1298,6 +1313,112 @@
             </div>
         </main>
 
+        <!-- Subtle Institutional Data Privacy & Confidentiality Footer -->
+        <footer class="no-print border-t border-slate-200 bg-white/80 py-2.5 px-4">
+            <div class="max-w-[1760px] mx-auto flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500">
+                <div class="flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                    <span>
+                        <strong class="font-semibold text-slate-700">Confidential HR Workspace</strong> — Aligned with the Philippine Data Privacy Act of 2012 (RA 10173). Zero database storage; session-only memory.
+                    </span>
+                </div>
+                <button
+                    type="button"
+                    @click="showPrivacyModal = true"
+                    class="text-blue-700 hover:text-blue-900 font-medium underline underline-offset-2"
+                >
+                    Data Privacy &amp; Security Assurance
+                </button>
+            </div>
+        </footer>
+
+        <!-- =============================================================== -->
+        <!-- DATA PRIVACY & CONFIDENTIALITY ASSURANCE MODAL (RA 10173)       -->
+        <!-- =============================================================== -->
+        <div
+            x-show="showPrivacyModal"
+            x-cloak
+            @keydown.escape.window="showPrivacyModal = false"
+            class="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/55 backdrop-blur-xs p-4"
+        >
+            <div
+                @click.outside="showPrivacyModal = false"
+                class="bg-white border border-slate-300 rounded-lg shadow-xl w-full max-w-lg overflow-hidden"
+            >
+                <div class="px-5 py-3.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="inline-flex items-center justify-center w-6 h-6 rounded-full bg-emerald-100 text-emerald-700">
+                            <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        </span>
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-900">Data Privacy &amp; Confidentiality Assurance</h3>
+                            <p class="text-[11px] text-slate-500">Republic Act No. 10173 (Data Privacy Act of 2012)</p>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        @click="showPrivacyModal = false"
+                        class="text-slate-400 hover:text-slate-700 text-sm font-semibold px-1.5"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <div class="p-5 space-y-3.5 text-xs text-slate-700 leading-relaxed max-h-[70vh] overflow-y-auto">
+                    <div class="rounded border border-emerald-200 bg-emerald-50/70 p-3 text-emerald-900">
+                        <strong class="font-semibold">Zero Permanent Storage:</strong> This system has <strong>no database</strong> and <strong>never saves</strong> uploaded PDS PDFs, images, or extracted records to any server disk or log file.
+                    </div>
+
+                    <ul class="space-y-2.5 list-none">
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600 font-bold mt-0.5">✓</span>
+                            <div>
+                                <strong class="text-slate-900">Instant In-Memory Auto-Purge:</strong> Uploaded files are processed strictly in volatile server memory and explicitly cleared (<code class="font-mono text-[11px] bg-slate-100 px-1 rounded">unset</code>) the moment extraction finishes, with <code class="font-mono text-[11px] bg-slate-100 px-1 rounded">Cache-Control: no-store</code> headers.
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600 font-bold mt-0.5">✓</span>
+                            <div>
+                                <strong class="text-slate-900">Session-Only Browser Isolation:</strong> Displayed entries live only inside your active browser tab (<code class="font-mono text-[11px] bg-slate-100 px-1 rounded">sessionStorage</code>) and are permanently wiped when you close the tab, click <strong>Clear All</strong>, click <strong>Lock</strong>, or drop a new PDS.
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600 font-bold mt-0.5">✓</span>
+                            <div>
+                                <strong class="text-slate-900">Strict Data Minimization:</strong> Only Work Experience (Section V), Trainings (Section VII), Applicant Name, and Date Accomplished are extracted. Sensitive PII (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN, home addresses, phone numbers, family background, and legal Q&amp;A) are excluded and never stored.
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600 font-bold mt-0.5">✓</span>
+                            <div>
+                                <strong class="text-slate-900">Stateless AI &amp; 100% On-Device Option:</strong> AI extraction requests are stateless (no chat history or public sharing). For <strong>100% on-device</strong> parsing of digital PDFs with zero external transmission, switch the engine dropdown to <strong>Local OCR / PDF Only (No API)</strong>.
+                            </div>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="text-emerald-600 font-bold mt-0.5">✓</span>
+                            <div>
+                                <strong class="text-slate-900">Active Web Security Hardening:</strong> Protected by Passcode Brute-Force Lockout (5 attempts / 10 mins), Scan Rate Limiting (20 req/min), 30-minute Idle Auto-Lock &amp; Wipe, Magic-Byte File Signature Verification, Strict CSRF/Same-Origin checks, HTTPS HSTS, Content-Security-Policy (CSP), and Search Engine Blocking (<code class="font-mono text-[11px] bg-slate-100 px-1 rounded">noindex</code>).
+                            </div>
+                        </li>
+                    </ul>
+
+                    <p class="pt-2 border-t border-slate-200 text-[11px] text-slate-500">
+                        Authorized HR / Selection Committee use only. Always click <strong>Clear All</strong> or <strong>Lock</strong> when stepping away from a shared workstation.
+                    </p>
+                </div>
+
+                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end">
+                    <button
+                        type="button"
+                        @click="showPrivacyModal = false"
+                        class="px-4 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded transition"
+                    >
+                        Understood
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- =============================================================== -->
         <!-- UPLOADED PDS PDF / IMAGE VERIFICATION PREVIEW MODAL             -->
         <!-- =============================================================== -->
@@ -1512,6 +1633,7 @@
                 uploadedFileName: '',
                 dateAccomplished: '', // ISO YYYY-MM-DD from PDS Page 4 ("Date Accomplished") or manual input
                 showPreviewModal: false,
+                showPrivacyModal: false,
                 previewViewMode: 'pdf', // 'pdf' | 'pages'
                 previewZoom: 100,
                 rawPdfObjectUrl: '',
@@ -1578,6 +1700,23 @@
                     this.$watch('scanEngine', () => this.saveToSessionStorage());
 
                     this.refreshIcons();
+
+                    // Automatic 30-minute inactivity auto-lock & memory wipe for shared HR workstations
+                    if (this.passcodeEnabled) {
+                        const IDLE_LIMIT_MS = 30 * 60 * 1000;
+                        let idleTimer = null;
+                        const resetIdleTimer = () => {
+                            if (idleTimer) clearTimeout(idleTimer);
+                            idleTimer = setTimeout(() => {
+                                this.performClearAll();
+                                this.performLockWorkspace();
+                            }, IDLE_LIMIT_MS);
+                        };
+                        ['mousemove', 'keydown', 'click', 'scroll', 'touchstart'].forEach(evt => {
+                            window.addEventListener(evt, resetIdleTimer, { passive: true });
+                        });
+                        resetIdleTimer();
+                    }
                 },
 
                 refreshIcons() {

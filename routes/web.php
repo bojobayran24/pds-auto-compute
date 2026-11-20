@@ -12,9 +12,9 @@ use Illuminate\Support\Facades\Route;
 |--------------------------------------------------------------------------
 */
 
-// Passcode Gate Unlock & Lock Endpoints (Rate-limited: 10 attempts per minute)
+// Passcode Gate Unlock & Lock Endpoints (Rate-limited: 5 attempts per 10 minutes)
 Route::post('/passcode/unlock', [PDSController::class, 'unlock'])
-    ->middleware('throttle:10,1')
+    ->middleware('throttle:5,10')
     ->name('pds.unlock');
 
 Route::post('/passcode/lock', [PDSController::class, 'lock'])

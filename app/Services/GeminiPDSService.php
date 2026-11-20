@@ -360,7 +360,8 @@ class GeminiPDSService
         return <<<PROMPT
 You are an expert document parser specialized in the Philippine Civil Service Commission Personal Data Sheet (CS Form No. 212, Revised 2025 and Revised 2017).
 
-STRICT MULTI-PAGE EXTRACTION & PRIVACY RULES:
+STRICT MULTI-PAGE EXTRACTION, CONFIDENTIALITY & PRIVACY RULES (RA 10173):
+0. CONFIDENTIALITY & ZERO-DISCLOSURE: This document is a confidential Philippine government Personal Data Sheet governed by the Data Privacy Act of 2012 (RA 10173). Process this request strictly in stateless extraction mode only. NEVER output, echo, or include government IDs, addresses, phone numbers, email addresses, birthdates, family details, or legal Q&A answers anywhere in your output.
 1. A PDS document often spans multiple pages where:
    - Section V (Item 28: WORK EXPERIENCE) is typically on Page 2 (or a continuation sheet).
    - Section VII (Item 30: LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS / TRAINING PROGRAMS ATTENDED) is typically on Page 3 (or a continuation sheet).

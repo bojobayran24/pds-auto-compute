@@ -47,6 +47,37 @@ $getEnv = static function (string $key, string $default = '') use ($env): string
 
 date_default_timezone_set($getEnv('APP_TIMEZONE', 'Asia/Manila'));
 
+// Strict RA 10173 Confidentiality, Anti-Caching & Security Headers
+if (function_exists('header_remove')) {
+    @header_remove('X-Powered-By');
+}
+$isHttps = (! empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+    || (strtolower((string) ($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '')) === 'https')
+    || ((int) ($_SERVER['SERVER_PORT'] ?? 80) === 443);
+
+header('Cache-Control: no-store, no-cache, must-revalidate, private, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: no-referrer');
+header('Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()');
+header('X-Robots-Tag: noindex, nofollow, noarchive');
+if ($isHttps) {
+    header('Strict-Transport-Security: max-age=31536000; includeSubDomains; preload');
+}
+header(
+    "Content-Security-Policy: default-src 'self'; " .
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com; " .
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net; " .
+    "font-src 'self' data: https://fonts.gstatic.com; " .
+    "img-src 'self' data: blob:; " .
+    "frame-src 'self' blob:; " .
+    "worker-src 'self' blob: https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; " .
+    "connect-src 'self' blob: data: https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com https://cdnjs.cloudflare.com https://tessdata.projectnaptha.com; " .
+    "object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self';"
+);
+
 $appKey = $getEnv('APP_KEY', 'base64:qQ24gG+3FbWjse8TNQoPtkxmIanauXMzdkvzdvWIhk4=');
 $rawKey = str_starts_with($appKey, 'base64:') ? (base64_decode(substr($appKey, 7)) ?: $appKey) : $appKey;
 $configuredPasscode = trim($getEnv('APP_ACCESS_PASSCODE', ''));
@@ -94,10 +125,24 @@ if (empty($sessionData['csrf_token'])) {
     $sessionData['csrf_token'] = bin2hex(random_bytes(16));
 }
 
-$saveCookieSession = static function (array $data) use ($cookieName, $encryptCookie): void {
+// Enforce 30-minute idle session auto-lock on the server side
+$idleTimeoutSeconds = 1800;
+$nowTs = time();
+if (! empty($sessionData['pds_unlocked'])) {
+    $lastActivity = (int) ($sessionData['last_activity'] ?? 0);
+    if ($lastActivity > 0 && ($nowTs - $lastActivity) > $idleTimeoutSeconds) {
+        unset($sessionData['pds_unlocked'], $sessionData['last_activity']);
+        $sessionData['csrf_token'] = bin2hex(random_bytes(16));
+    } else {
+        $sessionData['last_activity'] = $nowTs;
+    }
+}
+
+$saveCookieSession = static function (array $data) use ($cookieName, $encryptCookie, $isHttps): void {
     setcookie($cookieName, $encryptCookie($data), [
         'expires' => time() + 7200,
         'path' => '/',
+        'secure' => $isHttps,
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -131,22 +176,60 @@ $sendJson = static function (array $payload, int $status = 200) use (&$sessionDa
     exit;
 };
 
-// 3. Handle POST /passcode/unlock (Rate-limited: 10 attempts/minute per IP)
+// Same-Origin & CSRF Token verification for all state-changing POST requests
+$verifyPostSecurity = static function () use ($sessionData, $sendJson): void {
+    $host = strtolower((string) ($_SERVER['HTTP_HOST'] ?? ''));
+    $origin = (string) ($_SERVER['HTTP_ORIGIN'] ?? '');
+    if ($origin !== '' && $host !== '') {
+        $originHost = strtolower((string) parse_url($origin, PHP_URL_HOST));
+        $originPort = parse_url($origin, PHP_URL_PORT);
+        $originFull = $originPort ? ($originHost . ':' . $originPort) : $originHost;
+        if ($originFull !== $host && $originHost !== explode(':', $host)[0]) {
+            $sendJson(['ok' => false, 'message' => 'Cross-origin request blocked.'], 403);
+        }
+    }
+
+    $providedCsrf = (string) ($_SERVER['HTTP_X_CSRF_TOKEN'] ?? $_POST['_token'] ?? '');
+    $expectedCsrf = (string) ($sessionData['csrf_token'] ?? '');
+    if ($expectedCsrf !== '' && ($providedCsrf === '' || ! hash_equals($expectedCsrf, $providedCsrf))) {
+        $sendJson(['ok' => false, 'message' => 'Session expired or invalid security token. Please refresh the page.'], 419);
+    }
+};
+
+// Client IP helper (respects Vercel proxy headers safely)
+$clientIp = trim(explode(',', (string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'))[0]);
+$ipHash = hash('sha256', $clientIp . '|' . $rawKey);
+
+// 3. Handle POST /passcode/unlock (Hardened Brute-Force Lockout: 5 attempts / 10 minutes)
 if ($method === 'POST' && $routePath === '/passcode/unlock') {
-    $ipHash = hash('sha256', (string) ($_SERVER['REMOTE_ADDR'] ?? '127.0.0.1'));
-    $rateFile = sys_get_temp_dir() . '/pds_rate_' . substr($ipHash, 0, 16) . '.json';
+    $verifyPostSecurity();
+
+    $lockWindowSeconds = 600; // 10 minutes
+    $maxFailedAttempts = 5;
     $now = time();
-    $attempts = [];
+
+    // Dual-layer tracking: encrypted cookie + /tmp IP file (resilient on Vercel serverless)
+    $cookieAttempts = array_values(array_filter(
+        is_array($sessionData['unlock_fails'] ?? null) ? $sessionData['unlock_fails'] : [],
+        static fn ($t) => is_int($t) && ($now - $t) < $lockWindowSeconds
+    ));
+
+    $rateFile = sys_get_temp_dir() . '/pds_rate_' . substr($ipHash, 0, 20) . '.json';
+    $fileAttempts = [];
     if (is_readable($rateFile)) {
         $rawRate = json_decode((string) file_get_contents($rateFile), true);
         if (is_array($rawRate)) {
-            $attempts = array_values(array_filter($rawRate, static fn ($t) => is_int($t) && ($now - $t) < 60));
+            $fileAttempts = array_values(array_filter($rawRate, static fn ($t) => is_int($t) && ($now - $t) < $lockWindowSeconds));
         }
     }
-    if (count($attempts) >= 10) {
+
+    $effectiveCount = max(count($cookieAttempts), count($fileAttempts));
+    if ($effectiveCount >= $maxFailedAttempts) {
+        $oldest = min(array_merge($cookieAttempts ?: [$now], $fileAttempts ?: [$now]));
+        $waitMins = max(1, (int) ceil(($lockWindowSeconds - ($now - $oldest)) / 60));
         $sendJson([
             'ok' => false,
-            'message' => 'Too many passcode attempts. Please wait 1 minute before trying again.',
+            'message' => "Too many failed passcode attempts. Access temporarily locked — try again in {$waitMins} minute(s).",
         ], 429);
     }
 
@@ -155,22 +238,33 @@ if ($method === 'POST' && $routePath === '/passcode/unlock') {
     $inputPasscode = (string) ($jsonBody['passcode'] ?? $_POST['passcode'] ?? '');
 
     if ($configuredPasscode !== '' && ($inputPasscode === '' || ! hash_equals($configuredPasscode, $inputPasscode))) {
-        $attempts[] = $now;
-        @file_put_contents($rateFile, json_encode($attempts));
+        // Constant-time slowdown to defeat automated brute-force scripts
+        usleep(800000);
+        $cookieAttempts[] = $now;
+        $fileAttempts[] = $now;
+        $sessionData['unlock_fails'] = $cookieAttempts;
+        @file_put_contents($rateFile, json_encode($fileAttempts));
+        $remaining = max(0, $maxFailedAttempts - max(count($cookieAttempts), count($fileAttempts)));
         $sendJson([
             'ok' => false,
-            'message' => 'Invalid shared passcode. Please try again.',
-        ], 422);
+            'message' => $remaining > 0
+                ? "Invalid shared passcode. ({$remaining} attempt(s) remaining before temporary lockout.)"
+                : 'Too many failed passcode attempts. Access temporarily locked for 10 minutes.',
+        ], $remaining > 0 ? 422 : 429);
     }
 
     @unlink($rateFile);
+    unset($sessionData['unlock_fails']);
     $sessionData['pds_unlocked'] = true;
+    $sessionData['last_activity'] = $now;
+    $sessionData['csrf_token'] = bin2hex(random_bytes(16)); // Rotate CSRF token on login
     $sendJson(['ok' => true]);
 }
 
 // 4. Handle POST /passcode/lock
 if ($method === 'POST' && $routePath === '/passcode/lock') {
-    unset($sessionData['pds_unlocked']);
+    $verifyPostSecurity();
+    unset($sessionData['pds_unlocked'], $sessionData['last_activity']);
     $sessionData['csrf_token'] = bin2hex(random_bytes(16));
     $sendJson(['ok' => true]);
 }
@@ -178,13 +272,78 @@ if ($method === 'POST' && $routePath === '/passcode/lock') {
 // 5. VerifySharedPasscode Gate
 $isUnlocked = $configuredPasscode === '' || ! empty($sessionData['pds_unlocked']);
 
-// 6. Handle POST /api/scan-pds
+// Magic-Byte File Signature Validator (blocks spoofed executables/scripts disguised as PDF/JPG/PNG/WEBP)
+$validateUploadedMagicBytes = static function (string $tmpPath, int $size): bool {
+    if ($tmpPath === '' || ! is_readable($tmpPath) || $size <= 0 || $size > 10 * 1024 * 1024) {
+        return false;
+    }
+    $fh = @fopen($tmpPath, 'rb');
+    if (! $fh) {
+        return false;
+    }
+    $head = (string) fread($fh, 16);
+    fclose($fh);
+    if (strlen($head) < 4) {
+        return false;
+    }
+    if (str_starts_with($head, '%PDF-')) {
+        return true;
+    }
+    if (str_starts_with($head, "\xFF\xD8\xFF")) {
+        return true;
+    }
+    if (str_starts_with($head, "\x89PNG\r\n\x1A\n")) {
+        return true;
+    }
+    if (strlen($head) >= 12 && substr($head, 0, 4) === 'RIFF' && substr($head, 8, 4) === 'WEBP') {
+        return true;
+    }
+    return false;
+};
+
+// 6. Handle POST /api/scan-pds (Rate-limited: 20 requests/minute + Magic-Byte File Validation)
 if ($method === 'POST' && $routePath === '/api/scan-pds') {
+    $verifyPostSecurity();
+
     if (! $isUnlocked) {
         $sendJson([
             'ok' => false,
-            'message' => 'Session locked. Please unlock the application with the shared access passcode.',
+            'message' => 'Session locked or expired due to inactivity. Please unlock with the shared access passcode.',
         ], 401);
+    }
+
+    // Per-session & per-IP Scan Rate Limiter (max 20 scans per 60 seconds)
+    $scanNow = time();
+    $scanHits = array_values(array_filter(
+        is_array($sessionData['scan_hits'] ?? null) ? $sessionData['scan_hits'] : [],
+        static fn ($t) => is_int($t) && ($scanNow - $t) < 60
+    ));
+    if (count($scanHits) >= 20) {
+        $sendJson([
+            'ok' => false,
+            'message' => 'Scan rate limit reached (20 requests/min). Please wait a few seconds before scanning again.',
+        ], 429);
+    }
+    $scanHits[] = $scanNow;
+    $sessionData['scan_hits'] = $scanHits;
+
+    // Validate uploaded file magic bytes & enforce max 6 page images
+    if (! empty($_FILES['pds_file']['tmp_name'])) {
+        if (! $validateUploadedMagicBytes((string) $_FILES['pds_file']['tmp_name'], (int) ($_FILES['pds_file']['size'] ?? 0))) {
+            $sendJson(['ok' => false, 'message' => 'Invalid or unsupported file signature. Only genuine PDF, JPG, PNG, or WEBP files under 10 MB are accepted.'], 422);
+        }
+    }
+    if (! empty($_FILES['page_images']['tmp_name'])) {
+        $tmpArr = is_array($_FILES['page_images']['tmp_name']) ? $_FILES['page_images']['tmp_name'] : [$_FILES['page_images']['tmp_name']];
+        $sizeArr = is_array($_FILES['page_images']['size']) ? $_FILES['page_images']['size'] : [$_FILES['page_images']['size'] ?? 0];
+        if (count($tmpArr) > 6) {
+            $sendJson(['ok' => false, 'message' => 'Maximum of 6 page images allowed per scan request.'], 422);
+        }
+        foreach ($tmpArr as $i => $tp) {
+            if ($tp !== '' && ! $validateUploadedMagicBytes((string) $tp, (int) ($sizeArr[$i] ?? 0))) {
+                $sendJson(['ok' => false, 'message' => 'Invalid image signature detected. Upload rejected for security.'], 422);
+            }
+        }
     }
 
     // Stage 1 Free Table OCR-to-Text Mode (Zero Gemini API Quota Used)
@@ -403,7 +562,8 @@ if ($method === 'POST' && $routePath === '/api/scan-pds') {
     $systemPrompt = <<<PROMPT
 You are an expert document parser specialized in the Philippine Civil Service Commission Personal Data Sheet (CS Form No. 212, Revised 2025).
 
-STRICT PRIVACY & EXTRACTION RULES:
+STRICT PRIVACY, CONFIDENTIALITY & EXTRACTION RULES (RA 10173):
+0. CONFIDENTIALITY & ZERO-DISCLOSURE: This document is a confidential Philippine government Personal Data Sheet governed by the Data Privacy Act of 2012 (RA 10173). Process this request strictly in stateless extraction mode only. NEVER output, echo, or include government IDs, addresses, phone numbers, email addresses, birthdates, family details, or legal Q&A answers anywhere in your output.
 1. Extract ONLY two tables if present in the uploaded PDF or image:
    - Section V (Item 28): WORK EXPERIENCE
    - Section VII (Item 30): LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS / TRAINING PROGRAMS ATTENDED
