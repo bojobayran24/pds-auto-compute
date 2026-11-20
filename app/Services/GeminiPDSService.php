@@ -204,6 +204,7 @@ class GeminiPDSService
         }
 
         return [
+            'applicant_name' => trim((string) ($decoded['applicant_name'] ?? '')),
             'work_experience' => $this->normalizeWorkExperience($decoded['work_experience'] ?? []),
             'trainings' => $this->normalizeTrainings($decoded['trainings'] ?? []),
         ];
@@ -222,7 +223,7 @@ STRICT MULTI-PAGE EXTRACTION & PRIVACY RULES:
    - Section V (Item 28: WORK EXPERIENCE) is typically on Page 2 (or a continuation sheet).
    - Section VII (Item 30: LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS / TRAINING PROGRAMS ATTENDED) is typically on Page 3 (or a continuation sheet).
    You MUST inspect ALL provided pages/images and text blocks and extract EVERY row from BOTH Section V and Section VII.
-2. NEVER extract Personal Information (Section I), Family Background (Section II), Educational Background (Section III), Civil Service Eligibility (Section IV), Voluntary Work (Section VI), Other Information (Section VIII), government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, or legal questionnaire answers.
+2. Extract the applicant's full name ("applicant_name", e.g., "DELA CRUZ, JUAN SANTOS" or "JUAN S. DELA CRUZ") if visible anywhere in the document (such as Section I Surname/First Name/Middle Name or page headers/footers). Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, family background, or legal questionnaire answers.
 3. Ignore blank placeholder rows or rows labeled "N/A", "NONE", or "(Continue on separate sheet if necessary)".
 4. Format all dates strictly as "dd/mm/yyyy" (e.g., "13/01/2026", "24/10/2022").
    - If a work experience "To" date says "PRESENT", "TO DATE", or "CURRENT", output "PRESENT" in uppercase.
@@ -254,6 +255,10 @@ PROMPT;
         return [
             'type' => 'OBJECT',
             'properties' => [
+                'applicant_name' => [
+                    'type' => 'STRING',
+                    'description' => 'Full name of the PDS owner/applicant if visible in the document, otherwise empty string',
+                ],
                 'work_experience' => [
                     'type' => 'ARRAY',
                     'items' => [
@@ -301,7 +306,7 @@ PROMPT;
                     ],
                 ],
             ],
-            'required' => ['work_experience', 'trainings'],
+            'required' => ['applicant_name', 'work_experience', 'trainings'],
         ];
     }
 
@@ -454,31 +459,35 @@ PROMPT;
             return null;
         }
 
-        $formats = [
-            'd/m/Y',
-            'j/n/Y',
-            'm/d/Y',
-            'n/j/Y',
-            'Y/m/d',
-            'd/m/y',
-        ];
+        if (preg_match('/^(\d{1,4})\/(\d{1,2})\/(\d{1,4})$/', $clean, $m)) {
+            $a = (int) $m[1];
+            $b = (int) $m[2];
+            $c = (int) $m[3];
 
-        foreach ($formats as $format) {
-            try {
-                $dt = Carbon::createFromFormat('!' . $format, $clean);
-                if ($dt instanceof Carbon && $dt->format($format) === $clean) {
-                    return $dt;
+            if (strlen($m[1]) === 4) {
+                $year = $a;
+                $month = $b;
+                $day = $c;
+            } else {
+                $year = $c < 100 ? ($c > 50 ? 1900 + $c : 2000 + $c) : $c;
+                if ($a > 12 && $b <= 12) {
+                    $day = $a;
+                    $month = $b;
+                } elseif ($b > 12 && $a <= 12) {
+                    $month = $a;
+                    $day = $b;
+                } else {
+                    $day = $a;
+                    $month = $b;
                 }
-            } catch (Throwable) {
-                // Continue trying next format
+            }
+
+            if (checkdate($month, $day, $year)) {
+                return Carbon::createMidnightDate($year, $month, $day);
             }
         }
 
-        try {
-            return Carbon::parse($dateString)->startOfDay();
-        } catch (Throwable) {
-            return null;
-        }
+        return null;
     }
 
     private function resolveMimeType(UploadedFile $file): string

@@ -292,7 +292,7 @@ STRICT PRIVACY & EXTRACTION RULES:
 1. Extract ONLY two tables if present in the uploaded PDF or image:
    - Section V (Item 28): WORK EXPERIENCE
    - Section VII (Item 30): LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS / TRAINING PROGRAMS ATTENDED
-2. NEVER extract Personal Information (Section I), Family Background (Section II), Educational Background (Section III), Civil Service Eligibility (Section IV), Voluntary Work (Section VI), Other Information (Section VIII), government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, or legal questionnaire answers.
+2. Extract the applicant's full name ("applicant_name") if visible anywhere in the document (e.g. Section I Surname / First Name / Middle Name or signature block). Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, or legal questionnaire answers.
 3. Ignore blank placeholder rows or rows labeled "N/A", "NONE", or "(Continue on separate sheet if necessary)".
 4. Format all dates strictly as "dd/mm/yyyy" (e.g., "01/07/2026", "28/08/2025").
    - If a work experience "To" date says "PRESENT", "TO DATE", or "CURRENT", output "PRESENT" in uppercase.
@@ -305,6 +305,7 @@ PROMPT;
     $schema = [
         'type' => 'OBJECT',
         'properties' => [
+            'applicant_name' => ['type' => 'STRING'],
             'work_experience' => [
                 'type' => 'ARRAY',
                 'items' => [
@@ -352,7 +353,7 @@ PROMPT;
                 ],
             ],
         ],
-        'required' => ['work_experience', 'trainings'],
+        'required' => ['applicant_name', 'work_experience', 'trainings'],
     ];
 
     $generationConfig = [
@@ -430,30 +431,85 @@ PROMPT;
         ], 502);
     }
 
-    $parseDmyDate = static function (string $dateStr): ?DateTimeImmutable {
+    // Detect whether the document dates are primarily mm/dd/yyyy or dd/mm/yyyy
+    $allRawDates = [];
+    foreach (($extracted['work_experience'] ?? []) as $r) {
+        if (is_array($r)) {
+            $allRawDates[] = (string) ($r['date_from'] ?? '');
+            $allRawDates[] = (string) ($r['date_to'] ?? '');
+        }
+    }
+    foreach (($extracted['trainings'] ?? []) as $r) {
+        if (is_array($r)) {
+            $allRawDates[] = (string) ($r['date_from'] ?? '');
+            $allRawDates[] = (string) ($r['date_to'] ?? '');
+        }
+    }
+
+    $firstGt12 = 0;
+    $secondGt12 = 0;
+    foreach ($allRawDates as $ds) {
+        $c = trim(str_replace(['.', '-'], '/', $ds));
+        if (preg_match('/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/', $c, $m)) {
+            $p1 = (int) $m[1];
+            $p2 = (int) $m[2];
+            if ($p1 > 12 && $p2 <= 12) {
+                $firstGt12++;
+            } elseif ($p2 > 12 && $p1 <= 12) {
+                $secondGt12++;
+            }
+        }
+    }
+    $preferMdy = ($secondGt12 > 0 && $firstGt12 === 0);
+
+    $parseFlexibleDate = static function (string $dateStr) use ($preferMdy): ?DateTimeImmutable {
         $clean = trim(str_replace(['.', '-'], '/', $dateStr));
         if ($clean === '') {
             return null;
         }
-        foreach (['!d/m/Y', '!j/n/Y', '!m/d/Y', '!n/j/Y', '!Y/m/d', '!d/m/y'] as $fmt) {
-            $dt = DateTimeImmutable::createFromFormat($fmt, $clean);
-            if ($dt instanceof DateTimeImmutable) {
-                return $dt;
+        if (preg_match('/^(\d{1,4})\/(\d{1,2})\/(\d{1,4})$/', $clean, $m)) {
+            $a = (int) $m[1];
+            $b = (int) $m[2];
+            $c = (int) $m[3];
+
+            if (strlen($m[1]) === 4) {
+                $year = $a;
+                $month = $b;
+                $day = $c;
+            } else {
+                $year = $c < 100 ? ($c > 50 ? 1900 + $c : 2000 + $c) : $c;
+                if ($a > 12 && $b <= 12) {
+                    $day = $a;
+                    $month = $b;
+                } elseif ($b > 12 && $a <= 12) {
+                    $month = $a;
+                    $day = $b;
+                } elseif ($preferMdy) {
+                    $month = $a;
+                    $day = $b;
+                } else {
+                    $day = $a;
+                    $month = $b;
+                }
+            }
+
+            if (checkdate($month, $day, $year)) {
+                return DateTimeImmutable::createFromFormat('!Y-n-j', "{$year}-{$month}-{$day}") ?: null;
             }
         }
         return null;
     };
 
-    $calcYears = static function (string $fromStr, string $toStr, float $fallback = 0.0) use ($parseDmyDate): float {
-        $start = $parseDmyDate($fromStr);
+    $calcYears = static function (string $fromStr, string $toStr, float $fallback = 0.0) use ($parseFlexibleDate): float {
+        $start = $parseFlexibleDate($fromStr);
         if (! $start instanceof DateTimeImmutable) {
             return round(max(0.0, $fallback), 1);
         }
         $end = in_array(strtoupper(trim($toStr)), ['PRESENT', 'TO DATE', 'CURRENT', 'ONGOING', 'NOW'], true)
             ? new DateTimeImmutable('today')
-            : $parseDmyDate($toStr);
+            : $parseFlexibleDate($toStr);
         if (! $end instanceof DateTimeImmutable || $end < $start) {
-            return round(max(0.0, $fallback), 1);
+            return 0.0;
         }
         $days = (int) $start->diff($end)->days + 1;
         return round($days / 365.25, 1);
@@ -517,12 +573,15 @@ PROMPT;
         ];
     }
 
+    $applicantName = trim((string) ($extracted['applicant_name'] ?? ''));
+
     $sendJson([
         'ok' => true,
         'message' => (count($workRows) === 0 && count($trainingRows) === 0)
             ? 'Scan finished, but no Work Experience (Section V) or Training (Section VII) rows were detected on this page.'
             : sprintf('Extracted %d training(s) and %d work experience item(s).', count($trainingRows), count($workRows)),
         'data' => [
+            'applicant_name' => $applicantName,
             'work_experience' => $workRows,
             'trainings' => $trainingRows,
         ],

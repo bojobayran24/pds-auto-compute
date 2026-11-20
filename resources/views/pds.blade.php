@@ -210,7 +210,7 @@
     >
         <!-- Top Utility Bar -->
         <header class="no-print sticky top-0 z-30 bg-white border-b border-slate-300">
-            <div class="max-w-[1480px] mx-auto px-4 sm:px-6 h-12 flex items-center justify-between gap-4">
+            <div class="max-w-[1760px] mx-auto px-3 sm:px-5 lg:px-6 h-12 flex items-center justify-between gap-4">
                 <div class="flex items-center gap-2.5 min-w-0">
                     <span class="font-semibold text-sm text-slate-900 truncate">
                         PDS Auto-Compute
@@ -255,13 +255,13 @@
         </header>
 
         <!-- Two-Column Split Workspace -->
-        <main class="flex-1 max-w-[1480px] w-full mx-auto px-4 sm:px-6 py-5 print-layout">
-            <div class="flex flex-col lg:flex-row items-start gap-6">
+        <main class="flex-1 max-w-[1760px] w-full mx-auto px-3 sm:px-5 lg:px-6 py-5 print-layout">
+            <div class="flex flex-col lg:flex-row items-start gap-5">
 
                 <!-- =========================================================== -->
-                <!-- LEFT COLUMN (45% width): SCANNER + CLEAN CHECKLIST PICKER   -->
+                <!-- LEFT COLUMN (40% width): SCANNER + CLEAN CHECKLIST PICKER   -->
                 <!-- =========================================================== -->
-                <div class="no-print w-full lg:w-[45%] space-y-4 shrink-0">
+                <div class="no-print w-full lg:w-[40%] xl:w-[39%] space-y-4 shrink-0 min-w-0">
 
                     <!-- Compact Upload & Multi-Page Scanner Bar -->
                     <section class="bg-white border border-slate-300 rounded-md p-3.5">
@@ -909,10 +909,39 @@
                 </div>
 
                 <!-- =========================================================== -->
-                <!-- RIGHT COLUMN (55% width, sticky): SIMPLE EVALUATION TABLES  -->
+                <!-- RIGHT COLUMN (60% width): RESPONSIVE SIMPLE TABLES          -->
                 <!-- =========================================================== -->
-                <div class="w-full lg:w-[55%] lg:sticky lg:top-16 print-sheet">
-                    <section class="bg-white border border-slate-300 rounded-md shadow-2xs p-6 sm:p-7 print-sheet space-y-6">
+                <div class="w-full lg:w-[60%] xl:w-[61%] min-w-0 print-sheet">
+                    <section class="bg-white border border-slate-300 rounded-md shadow-2xs p-4 sm:p-6 print-sheet space-y-5">
+
+                        <!-- PDS Owner & Uploaded Filename Identification Box -->
+                        <div class="rounded border border-slate-300 bg-slate-50/90 p-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
+                            <div class="sm:col-span-7 flex items-center gap-2 min-w-0">
+                                <label class="text-[11px] font-bold uppercase tracking-wide text-slate-500 shrink-0">
+                                    PDS Owner:
+                                </label>
+                                <input
+                                    type="text"
+                                    x-model="applicantName"
+                                    placeholder="Auto-detected or type applicant name..."
+                                    class="print-input w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
+                                >
+                            </div>
+
+                            <div class="sm:col-span-5 flex items-center gap-2 min-w-0">
+                                <label class="text-[11px] font-bold uppercase tracking-wide text-slate-500 shrink-0">
+                                    Uploaded File:
+                                </label>
+                                <input
+                                    type="text"
+                                    x-model="uploadedFileName"
+                                    placeholder="No file uploaded yet"
+                                    readonly
+                                    class="print-input w-full font-mono text-[11px] font-medium text-slate-700 bg-slate-100 border border-slate-200 rounded px-2.5 py-1 focus:outline-none truncate"
+                                    :title="uploadedFileName || 'No file uploaded yet'"
+                                >
+                            </div>
+                        </div>
 
                         <!-- =================================================== -->
                         <!-- TABLE I: RELEVANT TRAINING                          -->
@@ -934,8 +963,8 @@
                                         <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold">Title of Learning &amp; Development / Training</th>
                                         <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold">Conducted / Sponsored By</th>
                                         <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold whitespace-nowrap">Inclusive Dates (From – To)</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold whitespace-nowrap">Type</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold whitespace-nowrap">Hours</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold">Type</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold whitespace-nowrap w-14">Hours</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -950,12 +979,12 @@
                                     <template x-for="(item, idx) in selectedTrainings" :key="item.id">
                                         <tr>
                                             <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
-                                            <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900" x-text="item.training_title || '—'"></td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-slate-700" x-text="item.conducted_by || '—'"></td>
+                                            <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900 break-words" x-text="item.training_title || '—'"></td>
+                                            <td class="border border-slate-400 px-2 py-1.5 text-slate-700 break-words" x-text="item.conducted_by || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums whitespace-nowrap">
                                                 <span x-text="formatDateRange(item.date_from, item.date_to)"></span>
                                             </td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center text-[11px] text-slate-700 whitespace-nowrap" x-text="item.type_of_ld || '—'"></td>
+                                            <td class="border border-slate-400 px-2 py-1.5 text-center text-[11px] text-slate-700 break-words" x-text="item.type_of_ld || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums whitespace-nowrap" x-text="formatHours(item.hours)"></td>
                                         </tr>
                                     </template>
@@ -965,7 +994,7 @@
                                         <td colspan="5" class="border border-slate-400 px-2.5 py-2 text-right text-xs">
                                             Total no. of hours
                                         </td>
-                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums">
+                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums whitespace-nowrap">
                                             <span x-text="formattedTotalTrainingHours"></span>
                                         </td>
                                     </tr>
@@ -993,8 +1022,8 @@
                                         <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold">Position Title</th>
                                         <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold">Department / Agency / Company</th>
                                         <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold whitespace-nowrap">Inclusive Dates (From – To)</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold whitespace-nowrap">Status / Gov't</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold whitespace-nowrap">Years</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold max-w-[140px]">Status / Gov't</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold whitespace-nowrap w-14">Years</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1009,13 +1038,13 @@
                                     <template x-for="(item, idx) in selectedWorkExperiences" :key="item.id">
                                         <tr>
                                             <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
-                                            <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900" x-text="item.position_title || '—'"></td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-slate-700" x-text="item.department_agency_company || '—'"></td>
+                                            <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900 break-words" x-text="item.position_title || '—'"></td>
+                                            <td class="border border-slate-400 px-2 py-1.5 text-slate-700 break-words" x-text="item.department_agency_company || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums whitespace-nowrap">
                                                 <span x-text="formatDateRange(item.date_from, item.date_to)"></span>
                                             </td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center text-[11px] text-slate-700 whitespace-nowrap">
-                                                <span x-text="(item.status_of_appointment || '—') + ' (' + (item.gov_service || 'N') + ')'"></span>
+                                            <td class="border border-slate-400 px-2 py-1.5 text-center text-[11px] text-slate-700 break-words leading-snug max-w-[140px]">
+                                                <span x-text="formatStatusGov(item.status_of_appointment, item.gov_service)"></span>
                                             </td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums whitespace-nowrap" x-text="formatYears(item.computed_years)"></td>
                                         </tr>
@@ -1026,7 +1055,7 @@
                                         <td colspan="5" class="border border-slate-400 px-2.5 py-2 text-right text-xs">
                                             Total no. of years
                                         </td>
-                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums">
+                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums whitespace-nowrap">
                                             <span x-text="formattedTotalWorkYears"></span>
                                         </td>
                                     </tr>
@@ -1052,6 +1081,7 @@
                 passcodeEnabled: Boolean(config.passcodeEnabled),
                 applicantName: '',
                 targetPosition: '',
+                uploadedFileName: '',
                 trainings: [],
                 workExperiences: [],
                 trainingSearch: '',
@@ -1083,6 +1113,7 @@
                     }, { deep: true });
                     this.$watch('applicantName', () => this.saveToSessionStorage());
                     this.$watch('targetPosition', () => this.saveToSessionStorage());
+                    this.$watch('uploadedFileName', () => this.saveToSessionStorage());
                     this.$watch('scanEngine', () => this.saveToSessionStorage());
 
                     this.refreshIcons();
@@ -1130,6 +1161,7 @@
                     return this.trainings.length > 0 ||
                         this.workExperiences.length > 0 ||
                         this.applicantName.trim() !== '' ||
+                        this.uploadedFileName.trim() !== '' ||
                         this.targetPosition.trim() !== '';
                 },
 
@@ -1258,28 +1290,54 @@
                     return Number((inclusiveDays / 365.25).toFixed(1));
                 },
 
+                get isDocumentMdyOrder() {
+                    let firstGt12 = 0;
+                    let secondGt12 = 0;
+                    const checkStr = (s) => {
+                        const clean = String(s || '').trim().replace(/[-.]/g, '/');
+                        const m = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+                        if (!m) return;
+                        const p1 = parseInt(m[1], 10);
+                        const p2 = parseInt(m[2], 10);
+                        if (p1 > 12 && p2 <= 12) firstGt12++;
+                        else if (p2 > 12 && p1 <= 12) secondGt12++;
+                    };
+                    this.workExperiences.forEach(w => { checkStr(w.date_from); checkStr(w.date_to); });
+                    this.trainings.forEach(t => { checkStr(t.date_from); checkStr(t.date_to); });
+                    return secondGt12 > 0 && firstGt12 === 0;
+                },
+
                 parseDMY(str) {
                     if (!str) return null;
                     const clean = String(str).trim().replace(/[-.]/g, '/');
                     const parts = clean.split('/');
                     if (parts.length !== 3) return null;
 
-                    let day = parseInt(parts[0], 10);
-                    let month = parseInt(parts[1], 10);
-                    let year = parseInt(parts[2], 10);
+                    let p0 = parseInt(parts[0], 10);
+                    let p1 = parseInt(parts[1], 10);
+                    let p2 = parseInt(parts[2], 10);
+
+                    let day, month, year;
 
                     if (parts[0].length === 4) {
-                        year = parseInt(parts[0], 10);
-                        month = parseInt(parts[1], 10);
-                        day = parseInt(parts[2], 10);
-                    } else if (month > 12 && day <= 12) {
-                        const tmp = day;
-                        day = month;
-                        month = tmp;
-                    }
-
-                    if (year < 100) {
-                        year += year > 50 ? 1900 : 2000;
+                        year = p0;
+                        month = p1;
+                        day = p2;
+                    } else {
+                        year = p2 < 100 ? (p2 > 50 ? 1900 + p2 : 2000 + p2) : p2;
+                        if (p0 > 12 && p1 <= 12) {
+                            day = p0;
+                            month = p1;
+                        } else if (p1 > 12 && p0 <= 12) {
+                            month = p0;
+                            day = p1;
+                        } else if (this.isDocumentMdyOrder) {
+                            month = p0;
+                            day = p1;
+                        } else {
+                            day = p0;
+                            month = p1;
+                        }
                     }
 
                     if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > 31) {
@@ -1287,8 +1345,17 @@
                     }
 
                     const dt = new Date(year, month - 1, day);
+                    if (dt.getFullYear() !== year || (dt.getMonth() + 1) !== month || dt.getDate() !== day) {
+                        return null;
+                    }
                     dt.setHours(0, 0, 0, 0);
                     return Number.isNaN(dt.getTime()) ? null : dt;
+                },
+
+                formatStatusGov(status, gov) {
+                    const s = String(status || '—').trim().replace(/\s*\/\s*/g, ' / ');
+                    const g = String(gov || 'N').trim().toUpperCase();
+                    return `${s} (${g})`;
                 },
 
                 formatDateRange(from, to) {
@@ -1389,6 +1456,7 @@
                     this.workExperiences = [];
                     this.applicantName = '';
                     this.targetPosition = '';
+                    this.uploadedFileName = '';
                     this.trainingSearch = '';
                     this.workSearch = '';
                     this.scanNotice = { type: 'info', message: '' };
@@ -1481,7 +1549,9 @@
                 async processDocuments(files) {
                     this.isScanning = true;
                     this.scanCancelled = false;
+                    const fileNamesJoined = files.map(f => f.name).join(', ');
                     this.scanningFileName = files.length === 1 ? files[0].name : `${files.length} files`;
+                    this.uploadedFileName = fileNamesJoined;
                     this.scanStageLabel = 'Reading';
                     this.scanSubStatus = 'Inspecting all pages...';
                     this.scanElapsed = 0;
@@ -1540,6 +1610,9 @@
                             const localCount = localParsed.trainings.length + localParsed.work_experience.length;
 
                             if (localCount > 0) {
+                                if (localParsed.applicant_name && (!this.appendOnScan || !this.applicantName.trim())) {
+                                    this.applicantName = localParsed.applicant_name;
+                                }
                                 this.applyExtractedRows(localParsed.trainings, localParsed.work_experience);
                                 this.scanNotice = {
                                     type: 'info',
@@ -1674,6 +1747,10 @@
                         if (isCandidatePage && pageLines.length > 0) {
                             allLines.push(`=== PDF PAGE ${pageNum} ===`);
                             allLines.push(...pageLines);
+                        } else if (isPurePage1 && pageLines.length > 0) {
+                            // Include top lines of Page 1 (Section I: Surname / First Name / Middle Name) for applicant name detection
+                            allLines.push(`=== PDF PAGE 1 HEADER (NAME ONLY) ===`);
+                            allLines.push(...pageLines.slice(0, 18));
                         }
 
                         // Render the page to a fast compressed JPEG if:
@@ -1767,11 +1844,55 @@
                  * Local CS Form No. 212 (Revised 2025 / 2017) Multi-Page Table Parser.
                  * Handles both same-line and split-line Training Titles across pages.
                  */
+                extractApplicantNameFromTextOrFilename(rawText, fileName = '') {
+                    if (rawText) {
+                        const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                        let surname = '';
+                        let firstName = '';
+                        let middleName = '';
+
+                        for (let i = 0; i < Math.min(lines.length, 40); i++) {
+                            const line = lines[i];
+                            const mSurname = line.match(/(?:2\.\s*)?SURNAME[\s\t:]+([A-ZÑ\s\-',.]{2,40})/i);
+                            if (mSurname && !/FIRST\s*NAME/i.test(mSurname[1])) {
+                                surname = mSurname[1].trim();
+                            }
+                            const mFirst = line.match(/FIRST\s*NAME[\s\t:]+([A-ZÑ\s\-',.]{2,40})/i);
+                            if (mFirst && !/NAME\s*EXTENSION|MIDDLE/i.test(mFirst[1])) {
+                                firstName = mFirst[1].trim();
+                            }
+                            const mMiddle = line.match(/MIDDLE\s*NAME[\s\t:]+([A-ZÑ\s\-',.]{2,40})/i);
+                            if (mMiddle && !/3\.\s*DATE/i.test(mMiddle[1])) {
+                                middleName = mMiddle[1].trim();
+                            }
+                        }
+
+                        if (surname && firstName) {
+                            return `${surname}, ${firstName}${middleName && middleName !== 'N/A' ? ' ' + middleName : ''}`;
+                        }
+                    }
+
+                    // Fallback: clean human-readable name from filename (e.g. "PDS_Juan_Dela_Cruz.pdf")
+                    if (fileName) {
+                        const firstFile = fileName.split(',')[0].trim();
+                        const base = firstFile.replace(/\.[^.]+$/, '')
+                            .replace(/\b(PDS|CS\s*FORM\s*212|REVISED\s*2025|2025|2026|2024|PAGE\s*\d+|SCAN|SCREENSHOT|IMG|IMAGE)\b/gi, ' ')
+                            .replace(/[_\-]+/g, ' ')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+                        if (base.length >= 3 && /[A-Za-z]{2,}/.test(base) && !/^(media|whatsapp|viber|capture|untitled|\d+)/i.test(base)) {
+                            return base.toUpperCase();
+                        }
+                    }
+                    return '';
+                },
+
                 parseCSForm212TextLocally(rawText) {
                     const work_experience = [];
                     const trainings = [];
+                    const applicant_name = this.extractApplicantNameFromTextOrFilename(rawText, this.uploadedFileName);
                     if (!rawText || !rawText.trim()) {
-                        return { work_experience, trainings };
+                        return { applicant_name, work_experience, trainings };
                     }
 
                     const lines = rawText
@@ -1968,7 +2089,7 @@
                         }
                     }
 
-                    return { work_experience, trainings };
+                    return { applicant_name, work_experience, trainings };
                 },
 
                 splitTrainingTail(tail, knownLdTypes) {
@@ -2054,6 +2175,12 @@
 
                     let extractedTrainings = Array.isArray(result.data?.trainings) ? result.data.trainings : [];
                     let extractedWork = Array.isArray(result.data?.work_experience) ? result.data.work_experience : [];
+                    const detectedName = String(result.data?.applicant_name || fallbackLocal?.applicant_name || '').trim()
+                        || this.extractApplicantNameFromTextOrFilename('', this.uploadedFileName);
+
+                    if (detectedName && (!this.appendOnScan || !this.applicantName.trim())) {
+                        this.applicantName = detectedName;
+                    }
 
                     // If AI missed a section that our local parser found, merge it in!
                     if (extractedTrainings.length === 0 && fallbackLocal?.trainings?.length > 0) {
@@ -2122,6 +2249,13 @@
                             this.workExperiences = mappedWork;
                         }
                     }
+
+                    // Recalculate work experience years with document-level date format detection (dd/mm/yyyy vs mm/dd/yyyy)
+                    this.workExperiences.forEach(w => {
+                        if (w.date_from) {
+                            w.computed_years = this.computeYearsBetween(w.date_from, w.date_to, w.computed_years);
+                        }
+                    });
                 },
 
                 deduplicateRows(rows, titleKey) {
@@ -2151,6 +2285,7 @@
                         const payload = {
                             applicantName: this.applicantName,
                             targetPosition: this.targetPosition,
+                            uploadedFileName: this.uploadedFileName,
                             scanEngine: this.scanEngine,
                             trainings: this.trainings.map(t => ({ ...t, editing: false })),
                             workExperiences: this.workExperiences.map(w => ({ ...w, editing: false }))
@@ -2169,6 +2304,7 @@
                         if (parsed && typeof parsed === 'object') {
                             this.applicantName = parsed.applicantName || '';
                             this.targetPosition = parsed.targetPosition || '';
+                            this.uploadedFileName = parsed.uploadedFileName || '';
                             if (['hybrid', 'local', 'gemini'].includes(parsed.scanEngine)) {
                                 this.scanEngine = parsed.scanEngine;
                             }
@@ -2178,6 +2314,11 @@
                             this.workExperiences = Array.isArray(parsed.workExperiences)
                                 ? parsed.workExperiences.map(w => ({ ...w, editing: false }))
                                 : [];
+                            this.workExperiences.forEach(w => {
+                                if (w.date_from) {
+                                    w.computed_years = this.computeYearsBetween(w.date_from, w.date_to, w.computed_years);
+                                }
+                            });
                         }
                     } catch (e) {
                         sessionStorage.removeItem(STORAGE_KEY);
