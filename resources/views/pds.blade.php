@@ -83,6 +83,8 @@
             .print-sheet {
                 width: 100% !important;
                 max-width: 100% !important;
+                max-height: none !important;
+                overflow: visible !important;
                 border: none !important;
                 box-shadow: none !important;
                 padding: 0 !important;
@@ -1010,10 +1012,10 @@
                 </div>
 
                 <!-- =========================================================== -->
-                <!-- RIGHT COLUMN (60% width): RESPONSIVE SIMPLE TABLES          -->
+                <!-- RIGHT COLUMN (60% width): STICKY RESPONSIVE TABLES          -->
                 <!-- =========================================================== -->
-                <div class="w-full lg:w-[60%] xl:w-[61%] min-w-0 print-sheet">
-                    <section class="bg-white border border-slate-300 rounded-md shadow-2xs p-4 sm:p-6 print-sheet space-y-5">
+                <div class="w-full lg:w-[60%] xl:w-[61%] min-w-0 lg:sticky lg:top-[68px] print-sheet">
+                    <section class="bg-white border border-slate-300 rounded-md shadow-2xs p-4 sm:p-6 lg:max-h-[calc(100vh-88px)] lg:overflow-y-auto print-sheet space-y-5">
 
                         <!-- PDS Owner & Uploaded Filename Identification Box -->
                         <div class="rounded border border-slate-300 bg-slate-50/90 p-3 space-y-2">
@@ -1657,6 +1659,10 @@
                                 x: moveEvent.clientX,
                                 y: moveEvent.clientY
                             };
+                            const targetEl = type === 'training' ? this.$refs.trainingDropZone : this.$refs.workDropZone;
+                            if (targetEl && typeof targetEl.scrollIntoView === 'function') {
+                                targetEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                            }
                         }
 
                         if (dragging) {
