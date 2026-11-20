@@ -150,7 +150,9 @@ $saveCookieSession = static function (array $data) use ($cookieName, $encryptCoo
 
 // Determine base URL & route path
 $scriptName = str_replace('\\', '/', $_SERVER['SCRIPT_NAME'] ?? '/index.php');
-$baseDir = rtrim(str_replace(['/public/index.php', '/api/index.php', '/index.php'], '', $scriptName), '/');
+$baseDir = str_ends_with($scriptName, '/index.php')
+    ? rtrim(str_replace(['/public/index.php', '/api/index.php', '/index.php'], '', $scriptName), '/')
+    : '';
 $requestUri = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
 $routePath = $baseDir !== '' && str_starts_with($requestUri, $baseDir)
     ? substr($requestUri, strlen($baseDir))
@@ -900,6 +902,59 @@ PROMPT;
     ]);
 }
 
+// 6b. Protected External Workspace Script (/app.js — passcode-gated + blocks direct tab navigation)
+if ($method === 'GET' && $routePath === '/app.js') {
+    if (! $isUnlocked) {
+        http_response_code(401);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo '// Unauthorized';
+        exit;
+    }
+
+    $fetchDest = strtolower((string) ($_SERVER['HTTP_SEC_FETCH_DEST'] ?? ''));
+    if ($fetchDest === 'document') {
+        http_response_code(403);
+        header('Content-Type: text/plain; charset=utf-8');
+        echo '// Forbidden';
+        exit;
+    }
+
+    $bladeRaw = (string) file_get_contents($basePath . '/resources/views/pds.blade.php');
+    $compiledRaw = str_replace(
+        [
+            '{{ csrf_token() }}',
+            "{{ route('pds.unlock') }}",
+            "{{ route('pds.lock') }}",
+            "{{ route('pds.scan') }}",
+            "{{ !empty(\$passcodeEnabled) ? 'true' : 'false' }}",
+        ],
+        [
+            htmlspecialchars($sessionData['csrf_token'], ENT_QUOTES, 'UTF-8'),
+            $routes['pds.unlock'],
+            $routes['pds.lock'],
+            $routes['pds.scan'],
+            ($configuredPasscode !== '') ? 'true' : 'false',
+        ],
+        $bladeRaw
+    );
+
+    $jsOut = '';
+    if (preg_match('/<script>\s*(function pdsAutoComputeApp\b.*?)<\/script>/s', $compiledRaw, $jsMatch)) {
+        $jsOut = $jsMatch[1];
+        // Safely strip block comments and leading/trailing line whitespace without breaking strings/regexes
+        $jsOut = preg_replace('/\/\*[\s\S]*?\*\//', '', $jsOut) ?? $jsOut;
+        $jsLines = array_filter(
+            array_map('trim', explode("\n", $jsOut)),
+            static fn (string $line): bool => $line !== '' && ! str_starts_with($line, '//')
+        );
+        $jsOut = implode("\n", $jsLines);
+    }
+
+    header('Content-Type: application/javascript; charset=utf-8');
+    echo $jsOut;
+    exit;
+}
+
 // 7. Render Single-Screen Blade Template (resources/views/pds.blade.php)
 $saveCookieSession($sessionData);
 $isLocked = ! $isUnlocked;
@@ -932,5 +987,32 @@ if (preg_match('/@if\(!empty\(\$isLocked\)\)(.*?)@else(.*?)@endif/s', $compiledH
     $compiledHtml = preg_replace_callback('/@if\(!empty\(\$isLocked\)\).*?@endif/s', static fn () => $selectedBlock, $compiledHtml, 1) ?? $compiledHtml;
 }
 
+// Externalize the large workspace <script> into the passcode-protected /app.js endpoint
+if (! $isLocked) {
+    $appJsUrl = ($baseDir ?: '') . '/app.js';
+    $compiledHtml = preg_replace(
+        '/<script>\s*function pdsAutoComputeApp\b.*?<\/script>/s',
+        '<script src="' . htmlspecialchars($appJsUrl, ENT_QUOTES, 'UTF-8') . '"></script>',
+        $compiledHtml,
+        1
+    ) ?? $compiledHtml;
+}
+
+// Strip HTML comments and minify HTML outside <script>/<style> so View Source is clean & compact
+$preservedBlocks = [];
+$compiledHtml = preg_replace_callback('/<(script|style)\b[^>]*>.*?<\/\1>/si', static function (array $m) use (&$preservedBlocks): string {
+    $key = '___PRESERVED_BLOCK_' . count($preservedBlocks) . '___';
+    $preservedBlocks[$key] = $m[0];
+    return $key;
+}, $compiledHtml) ?? $compiledHtml;
+
+$compiledHtml = preg_replace('/<!--[\s\S]*?-->/', '', $compiledHtml) ?? $compiledHtml;
+$compiledHtml = preg_replace('/>\s+</', '><', $compiledHtml) ?? $compiledHtml;
+$compiledHtml = preg_replace('/\s{2,}/', ' ', $compiledHtml) ?? $compiledHtml;
+
+if ($preservedBlocks !== []) {
+    $compiledHtml = str_replace(array_keys($preservedBlocks), array_values($preservedBlocks), $compiledHtml);
+}
+
 header('Content-Type: text/html; charset=utf-8');
-echo $compiledHtml;
+echo trim($compiledHtml);

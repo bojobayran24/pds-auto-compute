@@ -1701,6 +1701,23 @@
 
                     this.refreshIcons();
 
+                    // Deter casual View Source / DevTools shortcuts (keeps inputs & Copy button working)
+                    document.addEventListener('contextmenu', (e) => {
+                        if (!e.target.closest('input, textarea')) {
+                            e.preventDefault();
+                        }
+                    });
+                    document.addEventListener('keydown', (e) => {
+                        const k = (e.key || '').toUpperCase();
+                        if (
+                            k === 'F12' ||
+                            (e.ctrlKey && k === 'U') ||
+                            (e.ctrlKey && e.shiftKey && ['I', 'J', 'C'].includes(k))
+                        ) {
+                            e.preventDefault();
+                        }
+                    });
+
                     // Automatic 30-minute inactivity auto-lock & memory wipe for shared HR workstations
                     if (this.passcodeEnabled) {
                         const IDLE_LIMIT_MS = 30 * 60 * 1000;
