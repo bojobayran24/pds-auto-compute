@@ -187,6 +187,121 @@ if ($method === 'POST' && $routePath === '/api/scan-pds') {
         ], 401);
     }
 
+    // Stage 1 Free Table OCR-to-Text Mode (Zero Gemini API Quota Used)
+    $scanModeInput = trim((string) ($_POST['scan_mode'] ?? ''));
+    if ($scanModeInput === 'ocr_text_only') {
+        $ocrTexts = [];
+        $ocrWords2D = [];
+
+        $runOcrSpaceOnFile = static function (string $tmpPath, string $origName, int $pageIdx) use (&$ocrTexts, &$ocrWords2D): void {
+            if ($tmpPath === '' || ! is_readable($tmpPath)) {
+                return;
+            }
+            $rawBytes = @file_get_contents($tmpPath);
+            if ($rawBytes === false || $rawBytes === '') {
+                return;
+            }
+            $ext = strtolower(pathinfo($origName, PATHINFO_EXTENSION)) ?: 'jpg';
+            $mime = match ($ext) {
+                'png' => 'image/png',
+                'webp' => 'image/webp',
+                'pdf' => 'application/pdf',
+                default => 'image/jpeg',
+            };
+            $base64Img = "data:{$mime};base64," . base64_encode($rawBytes);
+            unset($rawBytes);
+
+            $ch = curl_init('https://api.ocr.space/parse/image');
+            curl_setopt_array($ch, [
+                CURLOPT_POST => true,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_CONNECTTIMEOUT => 8,
+                CURLOPT_TIMEOUT => 25,
+                CURLOPT_POSTFIELDS => [
+                    'apikey' => 'helloworld',
+                    'base64Image' => $base64Img,
+                    'isTable' => 'true',
+                    'isOverlayRequired' => 'true',
+                    'OCREngine' => '2',
+                    'scale' => 'true',
+                ],
+            ]);
+            $res = curl_exec($ch);
+            curl_close($ch);
+            if (! is_string($res) || $res === '') {
+                return;
+            }
+            $decodedOcr = json_decode($res, true);
+            $parsedResults = $decodedOcr['ParsedResults'] ?? [];
+            if (! is_array($parsedResults)) {
+                return;
+            }
+            foreach ($parsedResults as $pIdx => $pr) {
+                $txt = trim((string) ($pr['ParsedText'] ?? ''));
+                $txt = trim((string) preg_replace('/\[Note:.*?\]\s*/is', '', $txt));
+                if ($txt !== '') {
+                    $ocrTexts[] = "=== OCR PAGE " . ($pageIdx + $pIdx + 1) . " ===\n" . $txt;
+                }
+                $lines = $pr['TextOverlay']['Lines'] ?? [];
+                if (is_array($lines)) {
+                    $maxX = 1000;
+                    $maxY = 1000;
+                    foreach ($lines as $ln) {
+                        foreach (($ln['Words'] ?? []) as $wd) {
+                            $rEdge = (int) (($wd['Left'] ?? 0) + ($wd['Width'] ?? 0));
+                            $bEdge = (int) (($wd['Top'] ?? 0) + ($wd['Height'] ?? 0));
+                            if ($rEdge > $maxX) {
+                                $maxX = $rEdge;
+                            }
+                            if ($bEdge > $maxY) {
+                                $maxY = $bEdge;
+                            }
+                        }
+                    }
+                    foreach ($lines as $ln) {
+                        foreach (($ln['Words'] ?? []) as $wd) {
+                            $wText = trim((string) ($wd['WordText'] ?? ''));
+                            if ($wText === '') {
+                                continue;
+                            }
+                            $left = (float) ($wd['Left'] ?? 0);
+                            $top = (float) ($wd['Top'] ?? 0);
+                            $width = (float) ($wd['Width'] ?? (strlen($wText) * 8));
+                            $ocrWords2D[] = [
+                                'str' => $wText,
+                                'x' => $left,
+                                'y' => ($maxY + 50) - $top,
+                                'width' => max(4.0, $width),
+                                'pageWidth' => $maxX + 40,
+                                'pageNum' => 200 + $pageIdx + $pIdx,
+                            ];
+                        }
+                    }
+                }
+            }
+        };
+
+        if (! empty($_FILES['page_images']) && is_array($_FILES['page_images'])) {
+            $pi = $_FILES['page_images'];
+            if (is_array($pi['tmp_name'] ?? null)) {
+                foreach ($pi['tmp_name'] as $idx => $tmpName) {
+                    $runOcrSpaceOnFile((string) $tmpName, (string) ($pi['name'][$idx] ?? "page_{$idx}.jpg"), (int) $idx);
+                }
+            } else {
+                $runOcrSpaceOnFile((string) ($pi['tmp_name'] ?? ''), (string) ($pi['name'] ?? 'page.jpg'), 0);
+            }
+        } elseif (! empty($_FILES['pds_file']) && is_array($_FILES['pds_file'])) {
+            $f = $_FILES['pds_file'];
+            $runOcrSpaceOnFile((string) ($f['tmp_name'] ?? ''), (string) ($f['name'] ?? 'pds.jpg'), 0);
+        }
+
+        $sendJson([
+            'ok' => count($ocrTexts) > 0,
+            'converted_text' => implode("\n", $ocrTexts),
+            'items_2d' => $ocrWords2D,
+        ]);
+    }
+
     if ($geminiApiKey === '' || $geminiApiKey === 'your_gemini_api_key_here') {
         $sendJson(['ok' => false, 'message' => 'GEMINI_API_KEY is not configured in .env.'], 502);
     }
@@ -356,64 +471,86 @@ PROMPT;
         'required' => ['applicant_name', 'work_experience', 'trainings'],
     ];
 
-    $generationConfig = [
-        'temperature' => 0.0,
-        'responseMimeType' => 'application/json',
-        'responseSchema' => $schema,
-    ];
-    if (str_contains($geminiModel, '2.5')) {
-        $generationConfig['thinkingConfig'] = [
-            'thinkingBudget' => 0,
+    $candidateModels = array_values(array_unique(array_filter([
+        $geminiModel,
+        'gemini-flash-lite-latest',
+        'gemini-3-flash-preview',
+        'gemini-3.1-flash-lite-preview',
+        'gemini-2.5-flash',
+    ])));
+
+    $decodedResponse = null;
+    $httpCode = 0;
+
+    foreach ($candidateModels as $tryModel) {
+        $generationConfig = [
+            'temperature' => 0.0,
+            'responseMimeType' => 'application/json',
+            'responseSchema' => $schema,
         ];
+        if (str_contains($tryModel, '2.5')) {
+            $generationConfig['thinkingConfig'] = [
+                'thinkingBudget' => 0,
+            ];
+        }
+
+        $payload = [
+            'systemInstruction' => [
+                'parts' => [['text' => $systemPrompt]],
+            ],
+            'contents' => [
+                [
+                    'role' => 'user',
+                    'parts' => $userParts,
+                ],
+            ],
+            'generationConfig' => $generationConfig,
+        ];
+
+        $endpoint = sprintf(
+            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
+            rawurlencode($tryModel)
+        );
+
+        $ch = curl_init($endpoint);
+        curl_setopt_array($ch, [
+            CURLOPT_POST => true,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 10,
+            CURLOPT_TIMEOUT => $geminiTimeout,
+            CURLOPT_HTTPHEADER => [
+                'Content-Type: application/json',
+                'x-goog-api-key: ' . $geminiApiKey,
+            ],
+            CURLOPT_POSTFIELDS => json_encode($payload),
+        ]);
+
+        $responseBody = curl_exec($ch);
+        $curlErrNo = curl_errno($ch);
+        $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+        unset($payload);
+
+        if ($curlErrNo === 0 && is_string($responseBody) && $httpCode >= 200 && $httpCode < 300) {
+            $decodedResponse = json_decode($responseBody, true);
+            break;
+        }
+
+        if (is_string($responseBody)) {
+            $decodedResponse = json_decode($responseBody, true);
+        }
+
+        // Rotate to next model on 429 (quota), 503 (overload), 404 (not found), or timeout
+        if ($curlErrNo !== 0 || in_array($httpCode, [429, 503, 404, 0], true)) {
+            continue;
+        }
+
+        break;
     }
 
-    $payload = [
-        'systemInstruction' => [
-            'parts' => [['text' => $systemPrompt]],
-        ],
-        'contents' => [
-            [
-                'role' => 'user',
-                'parts' => $userParts,
-            ],
-        ],
-        'generationConfig' => $generationConfig,
-    ];
     unset($userParts);
 
-    $endpoint = sprintf(
-        'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-        rawurlencode($geminiModel)
-    );
-
-    $ch = curl_init($endpoint);
-    curl_setopt_array($ch, [
-        CURLOPT_POST => true,
-        CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 10,
-        CURLOPT_TIMEOUT => $geminiTimeout,
-        CURLOPT_HTTPHEADER => [
-            'Content-Type: application/json',
-            'x-goog-api-key: ' . $geminiApiKey,
-        ],
-        CURLOPT_POSTFIELDS => json_encode($payload),
-    ]);
-
-    $responseBody = curl_exec($ch);
-    $curlErrNo = curl_errno($ch);
-    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
-    curl_close($ch);
-    unset($payload);
-
-    if ($curlErrNo !== 0 || ! is_string($responseBody)) {
-        $sendJson([
-            'ok' => false,
-            'message' => 'The Gemini scan timed out or encountered a connection error. Try uploading a cropped image of Section V or VII, or add rows manually below.',
-        ], 502);
-    }
-
-    $decodedResponse = json_decode($responseBody, true);
-    if ($httpCode < 200 || $httpCode >= 300) {
+    if (! is_array($decodedResponse) || $httpCode < 200 || $httpCode >= 300) {
         $apiErr = (string) ($decodedResponse['error']['message'] ?? ('HTTP ' . $httpCode));
         $sendJson([
             'ok' => false,

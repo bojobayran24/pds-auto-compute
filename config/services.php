@@ -5,7 +5,7 @@ declare(strict_types=1);
 return [
     'gemini' => [
         'api_key' => env('GEMINI_API_KEY'),
-        'model' => env('GEMINI_MODEL', 'gemini-2.5-flash'),
+        'model' => env('GEMINI_MODEL', 'gemini-flash-lite-latest'),
         'timeout' => (int) env('GEMINI_TIMEOUT', 55),
     ],
 

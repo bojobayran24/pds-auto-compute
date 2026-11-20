@@ -28,7 +28,7 @@
         "APP_DEBUG": "false",
         "APP_KEY": "base64:qQ24gG+3FbWjse8TNQoPtkxmIanauXMzdkvzdvWIhk4=",
         "APP_ACCESS_PASSCODE": "psarsps 2027",
-        "GEMINI_MODEL": "gemini-2.5-flash",
+        "GEMINI_MODEL": "gemini-flash-lite-latest",
         "APP_TIMEZONE": "Asia/Manila",
         "SESSION_DRIVER": "cookie",
         "SESSION_ENCRYPT": "true",

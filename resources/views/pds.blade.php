@@ -359,552 +359,619 @@
                             </div>
                         </div>
 
-                        <!-- Non-Blocking Notice / Error Fallback -->
-                        <template x-if="scanNotice.message">
-                            <div
-                                :class="scanNotice.type === 'error'
-                                    ? 'bg-amber-50 border-amber-300 text-amber-900'
-                                    : 'bg-slate-100 border-slate-300 text-slate-800'"
-                                class="mt-2.5 rounded border px-3 py-2 text-xs flex items-start justify-between gap-2"
-                            >
-                                <div class="space-y-1.5">
-                                    <p x-text="scanNotice.message"></p>
-                                    <template x-if="scanNotice.type === 'error'">
-                                        <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
-                                            <button
-                                                type="button"
-                                                @click="addTrainingRow(true)"
-                                                class="px-2 py-0.5 text-[11px] font-medium bg-white border border-slate-300 rounded text-slate-800 hover:bg-slate-50"
-                                            >
-                                                + Add Training
-                                            </button>
-                                            <button
-                                                type="button"
-                                                @click="addWorkRow(true)"
-                                                class="px-2 py-0.5 text-[11px] font-medium bg-white border border-slate-300 rounded text-slate-800 hover:bg-slate-50"
-                                            >
-                                                + Add Work Experience
-                                            </button>
+                        <!-- Non-Blocking Notice / Error Fallback + View Converted Text Toggle -->
+                        <template x-if="scanNotice.message || convertedRawText">
+                            <div class="mt-2.5 space-y-2">
+                                <template x-if="scanNotice.message">
+                                    <div
+                                        :class="scanNotice.type === 'error'
+                                            ? 'bg-amber-50 border-amber-300 text-amber-900'
+                                            : 'bg-slate-100 border-slate-300 text-slate-800'"
+                                        class="rounded border px-3 py-2 text-xs flex items-start justify-between gap-2"
+                                    >
+                                        <div class="space-y-1.5 flex-1 min-w-0">
+                                            <div class="flex flex-wrap items-center justify-between gap-2">
+                                                <p x-text="scanNotice.message" class="break-words"></p>
+                                                <template x-if="convertedRawText">
+                                                    <button
+                                                        type="button"
+                                                        @click="showConvertedText = !showConvertedText"
+                                                        class="shrink-0 px-2 py-0.5 text-[11px] font-medium bg-white border border-slate-300 rounded text-slate-700 hover:bg-slate-50"
+                                                        x-text="showConvertedText ? 'Hide Converted Text' : 'View Converted Text'"
+                                                    ></button>
+                                                </template>
+                                            </div>
+                                            <template x-if="scanNotice.type === 'error'">
+                                                <div class="flex flex-wrap items-center gap-1.5 pt-0.5">
+                                                    <button
+                                                        type="button"
+                                                        @click="addTrainingRow(true)"
+                                                        class="px-2 py-0.5 text-[11px] font-medium bg-white border border-slate-300 rounded text-slate-800 hover:bg-slate-50"
+                                                    >
+                                                        + Add Training
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        @click="addWorkRow(true)"
+                                                        class="px-2 py-0.5 text-[11px] font-medium bg-white border border-slate-300 rounded text-slate-800 hover:bg-slate-50"
+                                                    >
+                                                        + Add Work Experience
+                                                    </button>
+                                                </div>
+                                            </template>
                                         </div>
-                                    </template>
+                                        <button
+                                            type="button"
+                                            @click="scanNotice.message = ''"
+                                            class="text-slate-400 hover:text-slate-700 text-xs leading-none px-1"
+                                            title="Dismiss"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                </template>
+
+                                <!-- Collapsible Stage 1 Converted Text Inspector & Re-Parser -->
+                                <div x-show="showConvertedText && convertedRawText" x-cloak class="rounded border border-slate-300 bg-slate-50 p-2.5 space-y-2">
+                                    <div class="flex items-center justify-between gap-2">
+                                        <span class="text-[11px] font-bold uppercase tracking-wide text-slate-600">
+                                            Stage 1: Converted PDF / OCR Text (Editable)
+                                        </span>
+                                        <button
+                                            type="button"
+                                            @click="reparseConvertedText()"
+                                            class="px-2.5 py-1 text-[11px] font-semibold text-white bg-slate-900 rounded hover:bg-slate-800"
+                                        >
+                                            Parse Text to Tables →
+                                        </button>
+                                    </div>
+                                    <textarea
+                                        x-model="convertedRawText"
+                                        rows="6"
+                                        class="w-full font-mono text-[11px] text-slate-800 bg-white border border-slate-300 rounded p-2 focus:border-slate-900 focus:outline-none"
+                                        placeholder="Converted PDF / OCR text appears here..."
+                                    ></textarea>
                                 </div>
-                                <button
-                                    type="button"
-                                    @click="scanNotice.message = ''"
-                                    class="text-slate-400 hover:text-slate-700 text-xs leading-none px-1"
-                                    title="Dismiss"
-                                >
-                                    ✕
-                                </button>
                             </div>
                         </template>
                     </section>
 
                     <!-- ======================================================= -->
-                    <!-- SECTION VII: LEARNING & DEVELOPMENT (TRAININGS)         -->
+                    <!-- UNIFIED TABBED PICKER: TRAININGS | WORK EXPERIENCE      -->
                     <!-- ======================================================= -->
                     <section class="bg-white border border-slate-300 rounded-md overflow-hidden">
-                        <div class="px-3.5 py-2.5 bg-slate-100 border-b border-slate-300 flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
-                                <h3 class="text-xs font-semibold text-slate-900">
-                                    Trainings / Learning &amp; Development
-                                </h3>
-                                <span class="text-[11px] font-mono tabular-nums px-1.5 py-0.5 rounded bg-white border border-slate-300 text-slate-700 font-medium">
-                                    <span x-text="selectedTrainings.length + '/' + trainings.length"></span> • <span x-text="formattedTotalTrainingHours + ' hrs'"></span>
-                                </span>
+
+                        <!-- Top 2-Tab Bar (Trainings | Work Experience) -->
+                        <div class="grid grid-cols-2 border-b border-slate-300 bg-slate-100">
+                            <button
+                                type="button"
+                                @click="activeLeftTab = 'trainings'"
+                                :class="activeLeftTab === 'trainings'
+                                    ? 'bg-white text-slate-900 font-semibold border-b-2 border-b-blue-600'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'"
+                                class="px-3 py-2.5 text-xs flex items-center justify-center gap-2 border-r border-slate-300 transition whitespace-nowrap"
+                            >
+                                <span>Trainings</span>
+                                <span
+                                    :class="activeLeftTab === 'trainings' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-300'"
+                                    class="font-mono text-[11px] tabular-nums px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap"
+                                    x-text="selectedTrainings.length + '/' + trainings.length + ' • ' + formattedTotalTrainingHours + ' hrs'"
+                                ></span>
+                            </button>
+
+                            <button
+                                type="button"
+                                @click="activeLeftTab = 'work'"
+                                :class="activeLeftTab === 'work'
+                                    ? 'bg-white text-slate-900 font-semibold border-b-2 border-b-blue-600'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'"
+                                class="px-3 py-2.5 text-xs flex items-center justify-center gap-2 transition whitespace-nowrap"
+                            >
+                                <span>Work Experience</span>
+                                <span
+                                    :class="activeLeftTab === 'work' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white text-slate-600 border-slate-300'"
+                                    class="font-mono text-[11px] tabular-nums px-1.5 py-0.5 rounded border font-semibold whitespace-nowrap"
+                                    x-text="selectedWorkExperiences.length + '/' + workExperiences.length + ' • ' + formattedTotalWorkYears + ' yrs'"
+                                ></span>
+                            </button>
+                        </div>
+
+                        <!-- Unified Action & Filter Sub-Toolbar for Active Tab -->
+                        <div class="px-3 py-2 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+                            <!-- Search / Filter Input -->
+                            <div class="flex-1 min-w-0">
+                                <template x-if="activeLeftTab === 'trainings'">
+                                    <input
+                                        type="text"
+                                        x-model="trainingSearch"
+                                        placeholder="Search trainings..."
+                                        class="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1 text-slate-800 placeholder-slate-400 focus:border-slate-600 focus:outline-none"
+                                    >
+                                </template>
+                                <template x-if="activeLeftTab === 'work'">
+                                    <input
+                                        type="text"
+                                        x-model="workSearch"
+                                        placeholder="Search work experience..."
+                                        class="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1 text-slate-800 placeholder-slate-400 focus:border-slate-600 focus:outline-none"
+                                    >
+                                </template>
                             </div>
 
-                            <div class="flex items-center gap-1.5">
-                                <template x-if="trainings.length > 0">
-                                    <div class="inline-flex rounded border border-slate-300 bg-white overflow-hidden text-[11px] font-medium">
+                            <!-- All | None | + Add Buttons -->
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <template x-if="activeLeftTab === 'trainings'">
+                                    <div class="flex items-center gap-1.5">
+                                        <template x-if="trainings.length > 0">
+                                            <div class="inline-flex rounded border border-slate-300 bg-white overflow-hidden text-[11px] font-medium">
+                                                <button
+                                                    type="button"
+                                                    @click="toggleAllTrainings(true)"
+                                                    :class="allTrainingsSelected ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                                                    class="px-2 py-1 transition"
+                                                >
+                                                    All
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="toggleAllTrainings(false)"
+                                                    :class="selectedTrainings.length === 0 ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                                                    class="px-2 py-1 border-l border-slate-300 transition"
+                                                >
+                                                    None
+                                                </button>
+                                            </div>
+                                        </template>
+
                                         <button
                                             type="button"
-                                            @click="toggleAllTrainings(true)"
-                                            :class="allTrainingsSelected ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
-                                            class="px-2 py-0.5 transition"
+                                            @click="addTrainingRow(true)"
+                                            class="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
                                         >
-                                            All
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click="toggleAllTrainings(false)"
-                                            :class="selectedTrainings.length === 0 ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
-                                            class="px-2 py-0.5 border-l border-slate-300 transition"
-                                        >
-                                            None
+                                            + Add
                                         </button>
                                     </div>
                                 </template>
 
-                                <button
-                                    type="button"
-                                    @click="addTrainingRow(true)"
-                                    class="px-2 py-0.5 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
-                                >
-                                    + Add
-                                </button>
+                                <template x-if="activeLeftTab === 'work'">
+                                    <div class="flex items-center gap-1.5">
+                                        <template x-if="workExperiences.length > 0">
+                                            <div class="inline-flex rounded border border-slate-300 bg-white overflow-hidden text-[11px] font-medium">
+                                                <button
+                                                    type="button"
+                                                    @click="toggleAllWork(true)"
+                                                    :class="allWorkSelected ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                                                    class="px-2 py-1 transition"
+                                                >
+                                                    All
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    @click="toggleAllWork(false)"
+                                                    :class="selectedWorkExperiences.length === 0 ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
+                                                    class="px-2 py-1 border-l border-slate-300 transition"
+                                                >
+                                                    None
+                                                </button>
+                                            </div>
+                                        </template>
+
+                                        <button
+                                            type="button"
+                                            @click="addWorkRow(true)"
+                                            class="px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
+                                        >
+                                            + Add
+                                        </button>
+                                    </div>
+                                </template>
                             </div>
                         </div>
 
-                        <!-- Quick Filter Bar (Appears when > 3 trainings exist) -->
-                        <template x-if="trainings.length > 3">
-                            <div class="px-3 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
-                                <input
-                                    type="text"
-                                    x-model="trainingSearch"
-                                    placeholder="Filter trainings..."
-                                    class="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1 text-slate-800 placeholder-slate-400 focus:border-slate-600 focus:outline-none"
-                                >
-                                <template x-if="trainingSearch">
-                                    <button
-                                        type="button"
-                                        @click="trainingSearch = ''"
-                                        class="text-xs text-slate-500 hover:text-slate-800 px-1.5"
-                                    >
-                                        Clear
-                                    </button>
-                                </template>
-                            </div>
-                        </template>
+                        <!-- =================================================== -->
+                        <!-- TAB 1 CONTENT: TRAININGS / LEARNING & DEVELOPMENT   -->
+                        <!-- =================================================== -->
+                        <div x-show="activeLeftTab === 'trainings'">
 
-                        <!-- Empty State -->
-                        <template x-if="trainings.length === 0">
-                            <div class="px-4 py-6 text-center text-xs text-slate-500">
-                                No training entries loaded. Upload a PDS above or <button type="button" @click="addTrainingRow(true)" class="underline text-slate-800 font-medium">add a row manually</button>.
-                            </div>
-                        </template>
-
-                        <!-- Professional Highlightable Rows -->
-                        <template x-if="trainings.length > 0">
-                            <div class="divide-y divide-slate-200">
-                                <template x-for="(item, index) in trainings" :key="item.id">
-                                    <div x-show="matchesTrainingFilter(item)">
-
-                                        <!-- 1. SELECTION ROW (HIGHLIGHTED WHEN SELECTED, CLEAN WHITE WHEN UNSELECTED) -->
-                                        <div
-                                            x-show="!item.editing"
-                                            @click="item.included = !item.included"
-                                            :class="item.included
-                                                ? 'bg-blue-50/75 hover:bg-blue-50'
-                                                : 'bg-white hover:bg-slate-50'"
-                                            class="px-3.5 py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
-                                        >
-                                            <div class="flex items-start gap-2.5 min-w-0 flex-1">
-                                                <input
-                                                    type="checkbox"
-                                                    x-model="item.included"
-                                                    @click.stop
-                                                    class="mt-0.5 w-4 h-4 rounded-xs border-slate-300 text-blue-600 focus:ring-0 cursor-pointer shrink-0"
-                                                >
-                                                <div class="min-w-0 flex-1">
-                                                    <div
-                                                        :class="item.included ? 'text-slate-900 font-medium' : 'text-slate-600'"
-                                                        class="text-xs leading-snug break-words"
-                                                        x-text="item.training_title || 'Untitled Training'"
-                                                    ></div>
-                                                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-                                                        <span x-show="item.conducted_by" x-text="item.conducted_by"></span>
-                                                        <span x-show="item.conducted_by && (item.date_from || item.date_to)" class="text-slate-300">•</span>
-                                                        <span class="font-mono tabular-nums" x-text="formatDateRange(item.date_from, item.date_to)"></span>
-                                                        <template x-if="item.type_of_ld">
-                                                            <span class="text-slate-400">• <span x-text="item.type_of_ld"></span></span>
-                                                        </template>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <!-- Right Side: Direct Hours Input + Edit/Delete -->
-                                            <div class="flex items-center gap-1.5 shrink-0" @click.stop>
-                                                <div
-                                                    :class="item.included ? 'border-blue-300 bg-white' : 'border-slate-200 bg-slate-50'"
-                                                    class="flex items-center border rounded px-1.5 py-0.5 focus-within:border-blue-600"
-                                                >
-                                                    <input
-                                                        type="number"
-                                                        step="0.5"
-                                                        min="0"
-                                                        x-model.number="item.hours"
-                                                        class="w-10 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
-                                                        title="Edit Hours"
-                                                    >
-                                                    <span class="ml-1 text-[10px] font-mono text-slate-500">hrs</span>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    @click="item.editing = true"
-                                                    class="px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-900 hover:bg-white/80 rounded transition"
-                                                    title="Edit row details"
-                                                >
-                                                    Edit
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    @click="removeTrainingRow(index)"
-                                                    class="p-1 text-slate-400 hover:text-red-600 rounded transition"
-                                                    title="Remove row"
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
+                            <!-- Empty State -->
+                            <template x-if="trainings.length === 0">
+                                <div class="px-4 py-8 text-center text-xs text-slate-500 space-y-2">
+                                    <div>No training entries loaded yet. Upload a PDS above or <button type="button" @click="addTrainingRow(true)" class="underline text-slate-800 font-medium">add a training row manually</button>.</div>
+                                    <template x-if="workExperiences.length > 0">
+                                        <div>
+                                            <button
+                                                type="button"
+                                                @click="activeLeftTab = 'work'"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100"
+                                            >
+                                                Switch to Work Experience (<span x-text="workExperiences.length"></span> loaded) →
+                                            </button>
                                         </div>
+                                    </template>
+                                </div>
+                            </template>
 
-                                        <!-- 2. INLINE EDIT PANEL -->
-                                        <div
-                                            x-show="item.editing"
-                                            x-cloak
-                                            class="p-3 bg-slate-50 border-y border-slate-200 space-y-2"
-                                        >
-                                            <div>
-                                                <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Training Title</label>
-                                                <input
-                                                    type="text"
-                                                    x-model="item.training_title"
-                                                    placeholder="Title of Learning & Development / Training"
-                                                    class="w-full text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1.5 focus:border-slate-900 focus:outline-none"
-                                                >
-                                            </div>
+                            <!-- Professional Highlightable Rows -->
+                            <template x-if="trainings.length > 0">
+                                <div class="divide-y divide-slate-200">
+                                    <template x-for="(item, index) in trainings" :key="item.id">
+                                        <div x-show="matchesTrainingFilter(item)">
 
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Conducted / Sponsored By</label>
+                                            <!-- 1. SELECTION ROW -->
+                                            <div
+                                                x-show="!item.editing"
+                                                @click="item.included = !item.included"
+                                                :class="item.included
+                                                    ? 'bg-blue-50/75 hover:bg-blue-50'
+                                                    : 'bg-white hover:bg-slate-50'"
+                                                class="px-3.5 py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                                            >
+                                                <div class="flex items-start gap-2.5 min-w-0 flex-1">
                                                     <input
-                                                        type="text"
-                                                        x-model="item.conducted_by"
-                                                        placeholder="Conducted / Sponsored By"
-                                                        class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
+                                                        type="checkbox"
+                                                        x-model="item.included"
+                                                        @click.stop
+                                                        class="mt-0.5 w-4 h-4 rounded-xs border-slate-300 text-blue-600 focus:ring-0 cursor-pointer shrink-0"
                                                     >
+                                                    <div class="min-w-0 flex-1">
+                                                        <div
+                                                            :class="item.included ? 'text-slate-900 font-medium' : 'text-slate-600'"
+                                                            class="text-xs leading-snug break-words"
+                                                            x-text="item.training_title || 'Untitled Training'"
+                                                        ></div>
+                                                        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
+                                                            <span x-show="item.conducted_by" x-text="item.conducted_by"></span>
+                                                            <span x-show="item.conducted_by && (item.date_from || item.date_to)" class="text-slate-300">•</span>
+                                                            <span class="font-mono tabular-nums" x-text="formatDateRange(item.date_from, item.date_to)"></span>
+                                                            <template x-if="item.type_of_ld">
+                                                                <span class="text-slate-400">• <span x-text="item.type_of_ld"></span></span>
+                                                            </template>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Type of L&amp;D</label>
-                                                    <input
-                                                        type="text"
-                                                        x-model="item.type_of_ld"
-                                                        placeholder="e.g. TECHNICAL"
-                                                        class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
-                                                    >
-                                                </div>
-                                            </div>
 
-                                            <div class="flex flex-wrap items-end justify-between gap-2 pt-1">
-                                                <div class="flex items-center gap-2">
-                                                    <div>
-                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">From (dd/mm/yyyy)</label>
-                                                        <input
-                                                            type="text"
-                                                            x-model="item.date_from"
-                                                            placeholder="dd/mm/yyyy"
-                                                            class="w-28 font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
-                                                        >
-                                                    </div>
-                                                    <div>
-                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">To (dd/mm/yyyy)</label>
-                                                        <input
-                                                            type="text"
-                                                            x-model="item.date_to"
-                                                            placeholder="dd/mm/yyyy"
-                                                            class="w-28 font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
-                                                        >
-                                                    </div>
-                                                    <div>
-                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Hours</label>
+                                                <!-- Right Side: Direct Hours Input + Edit/Delete -->
+                                                <div class="flex items-center gap-1.5 shrink-0" @click.stop>
+                                                    <div
+                                                        :class="item.included ? 'border-blue-300 bg-white' : 'border-slate-200 bg-slate-50'"
+                                                        class="flex items-center border rounded px-1.5 py-0.5 focus-within:border-blue-600"
+                                                    >
                                                         <input
                                                             type="number"
                                                             step="0.5"
                                                             min="0"
                                                             x-model.number="item.hours"
-                                                            class="w-20 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                            class="w-10 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
+                                                            title="Edit Hours"
+                                                        >
+                                                        <span class="ml-1 text-[10px] font-mono text-slate-500">hrs</span>
+                                                    </div>
+
+                                                    <button
+                                                        type="button"
+                                                        @click="item.editing = true"
+                                                        class="px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-900 hover:bg-white/80 rounded transition"
+                                                        title="Edit row details"
+                                                    >
+                                                        Edit
+                                                    </button>
+
+                                                    <button
+                                                        type="button"
+                                                        @click="removeTrainingRow(index)"
+                                                        class="p-1 text-slate-400 hover:text-red-600 rounded transition"
+                                                        title="Remove row"
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            </div>
+
+                                            <!-- 2. INLINE EDIT PANEL -->
+                                            <div
+                                                x-show="item.editing"
+                                                x-cloak
+                                                class="p-3 bg-slate-50 border-y border-slate-200 space-y-2"
+                                            >
+                                                <div>
+                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Training Title</label>
+                                                    <input
+                                                        type="text"
+                                                        x-model="item.training_title"
+                                                        placeholder="Title of Learning & Development / Training"
+                                                        class="w-full text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1.5 focus:border-slate-900 focus:outline-none"
+                                                    >
+                                                </div>
+
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Conducted / Sponsored By</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="item.conducted_by"
+                                                            placeholder="Conducted / Sponsored By"
+                                                            class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Type of L&amp;D</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="item.type_of_ld"
+                                                            placeholder="e.g. TECHNICAL"
+                                                            class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
                                                         >
                                                     </div>
                                                 </div>
 
-                                                <div class="flex items-center gap-1.5">
-                                                    <button
-                                                        type="button"
-                                                        @click="removeTrainingRow(index)"
-                                                        class="px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
-                                                    >
-                                                        Delete
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        @click="item.editing = false"
-                                                        class="px-3 py-1 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded"
-                                                    >
-                                                        Done
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
+                                                <div class="flex flex-wrap items-end justify-between gap-2 pt-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <div>
+                                                            <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">From (dd/mm/yyyy)</label>
+                                                            <input
+                                                                type="text"
+                                                                x-model="item.date_from"
+                                                                placeholder="dd/mm/yyyy"
+                                                                class="w-28 font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                            >
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">To (dd/mm/yyyy)</label>
+                                                            <input
+                                                                type="text"
+                                                                x-model="item.date_to"
+                                                                placeholder="dd/mm/yyyy"
+                                                                class="w-28 font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                            >
+                                                        </div>
+                                                        <div>
+                                                            <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Hours</label>
+                                                            <input
+                                                                type="number"
+                                                                step="0.5"
+                                                                min="0"
+                                                                x-model.number="item.hours"
+                                                                class="w-20 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                            >
+                                                        </div>
+                                                    </div>
 
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
-                    </section>
-
-                    <!-- ======================================================= -->
-                    <!-- SECTION V: WORK EXPERIENCE                              -->
-                    <!-- ======================================================= -->
-                    <section class="bg-white border border-slate-300 rounded-md overflow-hidden">
-                        <div class="px-3.5 py-2.5 bg-slate-100 border-b border-slate-300 flex flex-wrap items-center justify-between gap-2">
-                            <div class="flex items-center gap-2">
-                                <h3 class="text-xs font-semibold text-slate-900">
-                                    Work Experience
-                                </h3>
-                                <span class="text-[11px] font-mono tabular-nums px-1.5 py-0.5 rounded bg-white border border-slate-300 text-slate-700 font-medium">
-                                    <span x-text="selectedWorkExperiences.length + '/' + workExperiences.length"></span> • <span x-text="formattedTotalWorkYears + ' yrs'"></span>
-                                </span>
-                            </div>
-
-                            <div class="flex items-center gap-1.5">
-                                <template x-if="workExperiences.length > 0">
-                                    <div class="inline-flex rounded border border-slate-300 bg-white overflow-hidden text-[11px] font-medium">
-                                        <button
-                                            type="button"
-                                            @click="toggleAllWork(true)"
-                                            :class="allWorkSelected ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
-                                            class="px-2 py-0.5 transition"
-                                        >
-                                            All
-                                        </button>
-                                        <button
-                                            type="button"
-                                            @click="toggleAllWork(false)"
-                                            :class="selectedWorkExperiences.length === 0 ? 'bg-slate-200 text-slate-900 font-semibold' : 'text-slate-600 hover:bg-slate-50'"
-                                            class="px-2 py-0.5 border-l border-slate-300 transition"
-                                        >
-                                            None
-                                        </button>
-                                    </div>
-                                </template>
-
-                                <button
-                                    type="button"
-                                    @click="addWorkRow(true)"
-                                    class="px-2 py-0.5 text-[11px] font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 transition"
-                                >
-                                    + Add
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Quick Filter Bar (Appears when > 3 work items exist) -->
-                        <template x-if="workExperiences.length > 3">
-                            <div class="px-3 py-1.5 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
-                                <input
-                                    type="text"
-                                    x-model="workSearch"
-                                    placeholder="Filter positions..."
-                                    class="w-full text-xs bg-white border border-slate-300 rounded px-2.5 py-1 text-slate-800 placeholder-slate-400 focus:border-slate-600 focus:outline-none"
-                                >
-                                <template x-if="workSearch">
-                                    <button
-                                        type="button"
-                                        @click="workSearch = ''"
-                                        class="text-xs text-slate-500 hover:text-slate-800 px-1.5"
-                                    >
-                                        Clear
-                                    </button>
-                                </template>
-                            </div>
-                        </template>
-
-                        <!-- Empty State -->
-                        <template x-if="workExperiences.length === 0">
-                            <div class="px-4 py-6 text-center text-xs text-slate-500">
-                                No work experience entries loaded. Upload a PDS above or <button type="button" @click="addWorkRow(true)" class="underline text-slate-800 font-medium">add a row manually</button>.
-                            </div>
-                        </template>
-
-                        <!-- Professional Highlightable Rows -->
-                        <template x-if="workExperiences.length > 0">
-                            <div class="divide-y divide-slate-200">
-                                <template x-for="(item, index) in workExperiences" :key="item.id">
-                                    <div x-show="matchesWorkFilter(item)">
-
-                                        <!-- 1. SELECTION ROW (HIGHLIGHTED WHEN SELECTED, CLEAN WHITE WHEN UNSELECTED) -->
-                                        <div
-                                            x-show="!item.editing"
-                                            @click="item.included = !item.included"
-                                            :class="item.included
-                                                ? 'bg-blue-50/75 hover:bg-blue-50'
-                                                : 'bg-white hover:bg-slate-50'"
-                                            class="px-3.5 py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
-                                        >
-                                            <div class="flex items-start gap-2.5 min-w-0 flex-1">
-                                                <input
-                                                    type="checkbox"
-                                                    x-model="item.included"
-                                                    @click.stop
-                                                    class="mt-0.5 w-4 h-4 rounded-xs border-slate-300 text-blue-600 focus:ring-0 cursor-pointer shrink-0"
-                                                >
-                                                <div class="min-w-0 flex-1">
-                                                    <div
-                                                        :class="item.included ? 'text-slate-900 font-semibold' : 'text-slate-600 font-medium'"
-                                                        class="text-xs leading-snug break-words"
-                                                        x-text="item.position_title || 'Untitled Position'"
-                                                    ></div>
-                                                    <div class="text-[11px] text-slate-600 break-words mt-0.5" x-text="item.department_agency_company || '—'"></div>
-                                                    <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
-                                                        <span class="font-mono tabular-nums" x-text="formatDateRange(item.date_from, item.date_to)"></span>
-                                                        <template x-if="item.status_of_appointment">
-                                                            <span class="text-slate-400">• <span x-text="item.status_of_appointment"></span></span>
-                                                        </template>
-                                                        <span class="text-slate-400">• <span class="font-mono text-[11px]" x-text="'Gov: ' + (item.gov_service || 'N')"></span></span>
+                                                    <div class="flex items-center gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            @click="removeTrainingRow(index)"
+                                                            class="px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            @click="item.editing = false"
+                                                            class="px-3 py-1 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded"
+                                                        >
+                                                            Done
+                                                        </button>
                                                     </div>
                                                 </div>
                                             </div>
 
-                                            <!-- Right Side: Direct Years Input + Edit/Delete -->
-                                            <div class="flex items-center gap-1.5 shrink-0" @click.stop>
-                                                <div
-                                                    :class="item.included ? 'border-blue-300 bg-white' : 'border-slate-200 bg-slate-50'"
-                                                    class="flex items-center border rounded px-1.5 py-0.5 focus-within:border-blue-600"
-                                                >
-                                                    <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        min="0"
-                                                        x-model.number="item.computed_years"
-                                                        class="w-10 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
-                                                        title="Edit Computed Years"
-                                                    >
-                                                    <span class="ml-1 text-[10px] font-mono text-slate-500">yrs</span>
-                                                </div>
-
-                                                <button
-                                                    type="button"
-                                                    @click="item.editing = true"
-                                                    class="px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-900 hover:bg-white/80 rounded transition"
-                                                    title="Edit row details"
-                                                >
-                                                    Edit
-                                                </button>
-
-                                                <button
-                                                    type="button"
-                                                    @click="removeWorkRow(index)"
-                                                    class="p-1 text-slate-400 hover:text-red-600 rounded transition"
-                                                    title="Remove row"
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
                                         </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
 
-                                        <!-- 2. INLINE EDIT PANEL -->
-                                        <div
-                                            x-show="item.editing"
-                                            x-cloak
-                                            class="p-3 bg-slate-50 border-y border-slate-200 space-y-2"
-                                        >
-                                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Position Title</label>
-                                                    <input
-                                                        type="text"
-                                                        x-model="item.position_title"
-                                                        placeholder="Position Title"
-                                                        class="w-full text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1.5 focus:border-slate-900 focus:outline-none"
-                                                    >
-                                                </div>
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Department / Agency / Company</label>
-                                                    <input
-                                                        type="text"
-                                                        x-model="item.department_agency_company"
-                                                        placeholder="Department / Agency / Office / Company"
-                                                        class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2.5 py-1.5 focus:border-slate-900 focus:outline-none"
-                                                    >
-                                                </div>
-                                            </div>
+                        <!-- =================================================== -->
+                        <!-- TAB 2 CONTENT: WORK EXPERIENCE                      -->
+                        <!-- =================================================== -->
+                        <div x-show="activeLeftTab === 'work'" x-cloak>
+                            <!-- Empty State -->
+                            <template x-if="workExperiences.length === 0">
+                                <div class="px-4 py-8 text-center text-xs text-slate-500 space-y-2">
+                                    <div>No work experience entries loaded yet. Upload a PDS above or <button type="button" @click="addWorkRow(true)" class="underline text-slate-800 font-medium">add a position manually</button>.</div>
+                                    <template x-if="trainings.length > 0">
+                                        <div>
+                                            <button
+                                                type="button"
+                                                @click="activeLeftTab = 'trainings'"
+                                                class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100"
+                                            >
+                                                ← Switch to Trainings (<span x-text="trainings.length"></span> loaded)
+                                            </button>
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
 
-                                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">From (dd/mm/yyyy)</label>
-                                                    <input
-                                                        type="text"
-                                                        x-model="item.date_from"
-                                                        @change="recomputeRowYears(item)"
-                                                        placeholder="dd/mm/yyyy"
-                                                        class="w-full font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
-                                                    >
-                                                </div>
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">To (or PRESENT)</label>
-                                                    <input
-                                                        type="text"
-                                                        x-model="item.date_to"
-                                                        @change="recomputeRowYears(item)"
-                                                        placeholder="PRESENT"
-                                                        class="w-full font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
-                                                    >
-                                                </div>
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Appointment Status</label>
-                                                    <input
-                                                        type="text"
-                                                        x-model="item.status_of_appointment"
-                                                        placeholder="e.g. PERMANENT, COSW"
-                                                        class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
-                                                    >
-                                                </div>
-                                                <div>
-                                                    <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Gov't Service</label>
-                                                    <select
-                                                        x-model="item.gov_service"
-                                                        class="w-full text-xs font-mono text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
-                                                    >
-                                                        <option value="Y">Y (Yes)</option>
-                                                        <option value="N">N (No)</option>
-                                                    </select>
-                                                </div>
-                                            </div>
+                            <!-- Professional Highlightable Rows -->
+                            <template x-if="workExperiences.length > 0">
+                                <div class="divide-y divide-slate-200">
+                                    <template x-for="(item, index) in workExperiences" :key="item.id">
+                                        <div x-show="matchesWorkFilter(item)">
 
-                                            <div class="flex items-center justify-between pt-1">
-                                                <div class="flex items-center gap-2">
-                                                    <label class="text-[10px] font-semibold uppercase text-slate-500">Years:</label>
+                                            <!-- 1. SELECTION ROW -->
+                                            <div
+                                                x-show="!item.editing"
+                                                @click="item.included = !item.included"
+                                                :class="item.included
+                                                    ? 'bg-blue-50/75 hover:bg-blue-50'
+                                                    : 'bg-white hover:bg-slate-50'"
+                                                class="px-3.5 py-2.5 flex items-center justify-between gap-3 cursor-pointer select-none transition-colors"
+                                            >
+                                                <div class="flex items-start gap-2.5 min-w-0 flex-1">
                                                     <input
-                                                        type="number"
-                                                        step="0.1"
-                                                        min="0"
-                                                        x-model.number="item.computed_years"
-                                                        class="w-20 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                        type="checkbox"
+                                                        x-model="item.included"
+                                                        @click.stop
+                                                        class="mt-0.5 w-4 h-4 rounded-xs border-slate-300 text-blue-600 focus:ring-0 cursor-pointer shrink-0"
                                                     >
+                                                    <div class="min-w-0 flex-1">
+                                                        <div
+                                                            :class="item.included ? 'text-slate-900 font-semibold' : 'text-slate-600 font-medium'"
+                                                            class="text-xs leading-snug break-words"
+                                                            x-text="item.position_title || 'Untitled Position'"
+                                                        ></div>
+                                                        <div class="text-[11px] text-slate-600 break-words mt-0.5" x-text="item.department_agency_company || '—'"></div>
+                                                        <div class="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-slate-500">
+                                                            <span class="font-mono tabular-nums" x-text="formatDateRange(item.date_from, item.date_to)"></span>
+                                                            <template x-if="item.status_of_appointment">
+                                                                <span class="text-slate-400">• <span x-text="item.status_of_appointment"></span></span>
+                                                            </template>
+                                                            <span class="text-slate-400">• <span class="font-mono text-[11px]" x-text="'Gov: ' + (item.gov_service || 'N')"></span></span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <!-- Right Side: Direct Years Input + Edit/Delete -->
+                                                <div class="flex items-center gap-1.5 shrink-0" @click.stop>
+                                                    <div
+                                                        :class="item.included ? 'border-blue-300 bg-white' : 'border-slate-200 bg-slate-50'"
+                                                        class="flex items-center border rounded px-1.5 py-0.5 focus-within:border-blue-600"
+                                                    >
+                                                        <input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            x-model.number="item.computed_years"
+                                                            class="w-10 text-right font-mono text-xs font-semibold tabular-nums text-slate-900 bg-transparent focus:outline-none"
+                                                            title="Edit Computed Years"
+                                                        >
+                                                        <span class="ml-1 text-[10px] font-mono text-slate-500">yrs</span>
+                                                    </div>
+
                                                     <button
                                                         type="button"
-                                                        @click="recomputeRowYears(item)"
-                                                        class="text-[11px] text-slate-600 hover:text-slate-900 underline"
+                                                        @click="item.editing = true"
+                                                        class="px-1.5 py-1 text-[11px] text-slate-500 hover:text-slate-900 hover:bg-white/80 rounded transition"
+                                                        title="Edit row details"
                                                     >
-                                                        Recalculate from dates
+                                                        Edit
                                                     </button>
-                                                </div>
 
-                                                <div class="flex items-center gap-1.5">
                                                     <button
                                                         type="button"
                                                         @click="removeWorkRow(index)"
-                                                        class="px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
+                                                        class="p-1 text-slate-400 hover:text-red-600 rounded transition"
+                                                        title="Remove row"
                                                     >
-                                                        Delete
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        @click="item.editing = false"
-                                                        class="px-3 py-1 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded"
-                                                    >
-                                                        Done
+                                                        ✕
                                                     </button>
                                                 </div>
                                             </div>
-                                        </div>
 
-                                    </div>
-                                </template>
-                            </div>
-                        </template>
+                                            <!-- 2. INLINE EDIT PANEL -->
+                                            <div
+                                                x-show="item.editing"
+                                                x-cloak
+                                                class="p-3 bg-slate-50 border-y border-slate-200 space-y-2"
+                                            >
+                                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Position Title</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="item.position_title"
+                                                            placeholder="Position Title"
+                                                            class="w-full text-xs font-medium text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1.5 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Department / Agency / Company</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="item.department_agency_company"
+                                                            placeholder="Department / Agency / Office / Company"
+                                                            class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2.5 py-1.5 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                    </div>
+                                                </div>
+
+                                                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">From (dd/mm/yyyy)</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="item.date_from"
+                                                            @change="recomputeRowYears(item)"
+                                                            placeholder="dd/mm/yyyy"
+                                                            class="w-full font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">To (or PRESENT)</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="item.date_to"
+                                                            @change="recomputeRowYears(item)"
+                                                            placeholder="PRESENT"
+                                                            class="w-full font-mono text-xs tabular-nums text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Appointment Status</label>
+                                                        <input
+                                                            type="text"
+                                                            x-model="item.status_of_appointment"
+                                                            placeholder="e.g. PERMANENT, COSW"
+                                                            class="w-full text-xs text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                    </div>
+                                                    <div>
+                                                        <label class="block text-[10px] font-semibold uppercase text-slate-500 mb-0.5">Gov't Service</label>
+                                                        <select
+                                                            x-model="item.gov_service"
+                                                            class="w-full text-xs font-mono text-slate-800 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                            <option value="Y">Y (Yes)</option>
+                                                            <option value="N">N (No)</option>
+                                                        </select>
+                                                    </div>
+                                                </div>
+
+                                                <div class="flex items-center justify-between pt-1">
+                                                    <div class="flex items-center gap-2">
+                                                        <label class="text-[10px] font-semibold uppercase text-slate-500">Years:</label>
+                                                        <input
+                                                            type="number"
+                                                            step="0.1"
+                                                            min="0"
+                                                            x-model.number="item.computed_years"
+                                                            class="w-20 font-mono text-xs font-semibold tabular-nums text-slate-900 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                                        >
+                                                        <button
+                                                            type="button"
+                                                            @click="recomputeRowYears(item)"
+                                                            class="text-[11px] text-slate-600 hover:text-slate-900 underline"
+                                                        >
+                                                            Recalculate from dates
+                                                        </button>
+                                                    </div>
+
+                                                    <div class="flex items-center gap-1.5">
+                                                        <button
+                                                            type="button"
+                                                            @click="removeWorkRow(index)"
+                                                            class="px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 rounded"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            @click="item.editing = false"
+                                                            class="px-3 py-1 text-xs font-medium text-white bg-slate-900 hover:bg-slate-800 rounded"
+                                                        >
+                                                            Done
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                        </div>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+
                     </section>
                 </div>
 
@@ -915,31 +982,41 @@
                     <section class="bg-white border border-slate-300 rounded-md shadow-2xs p-4 sm:p-6 print-sheet space-y-5">
 
                         <!-- PDS Owner & Uploaded Filename Identification Box -->
-                        <div class="rounded border border-slate-300 bg-slate-50/90 p-3 grid grid-cols-1 sm:grid-cols-12 gap-3 items-center">
-                            <div class="sm:col-span-7 flex items-center gap-2 min-w-0">
-                                <label class="text-[11px] font-bold uppercase tracking-wide text-slate-500 shrink-0">
+                        <div class="rounded border border-slate-300 bg-slate-50/90 p-3 space-y-2">
+                            <div class="flex items-center gap-2 min-w-0">
+                                <label class="text-[11px] font-bold uppercase tracking-wide text-slate-500 w-28 shrink-0">
                                     PDS Owner:
                                 </label>
                                 <input
                                     type="text"
                                     x-model="applicantName"
-                                    placeholder="Auto-detected or type applicant name..."
-                                    class="print-input w-full text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
+                                    placeholder="Auto-detected on scan or type applicant name..."
+                                    class="print-input flex-1 min-w-0 text-xs font-bold text-slate-900 bg-white border border-slate-300 rounded px-2.5 py-1 focus:border-slate-900 focus:outline-none"
                                 >
                             </div>
 
-                            <div class="sm:col-span-5 flex items-center gap-2 min-w-0">
-                                <label class="text-[11px] font-bold uppercase tracking-wide text-slate-500 shrink-0">
-                                    Uploaded File:
-                                </label>
-                                <input
-                                    type="text"
-                                    x-model="uploadedFileName"
-                                    placeholder="No file uploaded yet"
-                                    readonly
-                                    class="print-input w-full font-mono text-[11px] font-medium text-slate-700 bg-slate-100 border border-slate-200 rounded px-2.5 py-1 focus:outline-none truncate"
-                                    :title="uploadedFileName || 'No file uploaded yet'"
+                            <div class="flex items-center justify-between gap-2 min-w-0">
+                                <div class="flex items-center gap-2 min-w-0 flex-1">
+                                    <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 w-28 shrink-0">
+                                        Uploaded File:
+                                    </span>
+                                    <span
+                                        class="font-mono text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded px-2.5 py-1 truncate flex-1 min-w-0"
+                                        :title="uploadedFileName || 'No file uploaded yet'"
+                                        x-text="uploadedFileName || 'No file uploaded yet'"
+                                    ></span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    @click="openFilePreview()"
+                                    :disabled="!hasFilePreview"
+                                    class="no-print shrink-0 inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 disabled:opacity-40 disabled:pointer-events-none transition"
+                                    title="Preview uploaded PDS PDF or Image for verification"
                                 >
+                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+                                    <span>Preview PDF / File</span>
+                                </button>
                             </div>
                         </div>
 
@@ -956,15 +1033,15 @@
                                 </span>
                             </div>
 
-                            <table class="w-full border-collapse border border-slate-400 text-xs print-table">
+                            <table class="w-full table-fixed border-collapse border border-slate-400 text-xs print-table">
                                 <thead>
                                     <tr class="bg-slate-100 text-slate-900">
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-7">#</th>
-                                        <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold">Title of Learning &amp; Development / Training</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold">Conducted / Sponsored By</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold whitespace-nowrap">Inclusive Dates (From – To)</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold">Type</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold whitespace-nowrap w-14">Hours</th>
+                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[5%]">#</th>
+                                        <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold w-[33%]">Title of Learning &amp; Development / Training</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[19%]">Conducted / Sponsored By</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[22%]">Inclusive Dates (From – To)</th>
+                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[12%]">Type</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold w-[9%]">Hours</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -978,14 +1055,14 @@
 
                                     <template x-for="(item, idx) in selectedTrainings" :key="item.id">
                                         <tr>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
+                                            <td class="border border-slate-400 px-1.5 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
                                             <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900 break-words" x-text="item.training_title || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-slate-700 break-words" x-text="item.conducted_by || '—'"></td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums whitespace-nowrap">
+                                            <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums break-words">
                                                 <span x-text="formatDateRange(item.date_from, item.date_to)"></span>
                                             </td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center text-[11px] text-slate-700 break-words" x-text="item.type_of_ld || '—'"></td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums whitespace-nowrap" x-text="formatHours(item.hours)"></td>
+                                            <td class="border border-slate-400 px-1.5 py-1.5 text-center text-[11px] text-slate-700 break-words" x-text="item.type_of_ld || '—'"></td>
+                                            <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums" x-text="formatHours(item.hours)"></td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -994,7 +1071,7 @@
                                         <td colspan="5" class="border border-slate-400 px-2.5 py-2 text-right text-xs">
                                             Total no. of hours
                                         </td>
-                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums whitespace-nowrap">
+                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums">
                                             <span x-text="formattedTotalTrainingHours"></span>
                                         </td>
                                     </tr>
@@ -1015,15 +1092,15 @@
                                 </span>
                             </div>
 
-                            <table class="w-full border-collapse border border-slate-400 text-xs print-table">
+                            <table class="w-full table-fixed border-collapse border border-slate-400 text-xs print-table">
                                 <thead>
                                     <tr class="bg-slate-100 text-slate-900">
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-7">#</th>
-                                        <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold">Position Title</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold">Department / Agency / Company</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold whitespace-nowrap">Inclusive Dates (From – To)</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold max-w-[140px]">Status / Gov't</th>
-                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold whitespace-nowrap w-14">Years</th>
+                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[5%]">#</th>
+                                        <th class="border border-slate-400 px-2.5 py-1.5 text-left font-semibold w-[26%]">Position Title</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-left font-semibold w-[23%]">Department / Agency / Company</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-center font-semibold w-[22%]">Inclusive Dates (From – To)</th>
+                                        <th class="border border-slate-400 px-1.5 py-1.5 text-center font-semibold w-[15%]">Status / Gov't</th>
+                                        <th class="border border-slate-400 px-2 py-1.5 text-right font-semibold w-[9%]">Years</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -1037,16 +1114,16 @@
 
                                     <template x-for="(item, idx) in selectedWorkExperiences" :key="item.id">
                                         <tr>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
+                                            <td class="border border-slate-400 px-1.5 py-1.5 text-center font-mono text-[11px] text-slate-500 tabular-nums" x-text="idx + 1"></td>
                                             <td class="border border-slate-400 px-2.5 py-1.5 font-medium text-slate-900 break-words" x-text="item.position_title || '—'"></td>
                                             <td class="border border-slate-400 px-2 py-1.5 text-slate-700 break-words" x-text="item.department_agency_company || '—'"></td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums whitespace-nowrap">
+                                            <td class="border border-slate-400 px-2 py-1.5 text-center font-mono text-[11px] text-slate-700 tabular-nums break-words">
                                                 <span x-text="formatDateRange(item.date_from, item.date_to)"></span>
                                             </td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-center text-[11px] text-slate-700 break-words leading-snug max-w-[140px]">
+                                            <td class="border border-slate-400 px-1.5 py-1.5 text-center text-[11px] text-slate-700 break-words leading-snug">
                                                 <span x-text="formatStatusGov(item.status_of_appointment, item.gov_service)"></span>
                                             </td>
-                                            <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums whitespace-nowrap" x-text="formatYears(item.computed_years)"></td>
+                                            <td class="border border-slate-400 px-2 py-1.5 text-right font-mono font-semibold text-slate-900 tabular-nums" x-text="formatYears(item.computed_years)"></td>
                                         </tr>
                                     </template>
                                 </tbody>
@@ -1055,7 +1132,7 @@
                                         <td colspan="5" class="border border-slate-400 px-2.5 py-2 text-right text-xs">
                                             Total no. of years
                                         </td>
-                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums whitespace-nowrap">
+                                        <td class="border border-slate-400 px-2 py-2 text-right font-mono text-xs tabular-nums">
                                             <span x-text="formattedTotalWorkYears"></span>
                                         </td>
                                     </tr>
@@ -1068,6 +1145,171 @@
 
             </div>
         </main>
+
+        <!-- =============================================================== -->
+        <!-- UPLOADED PDS PDF / IMAGE VERIFICATION PREVIEW MODAL             -->
+        <!-- =============================================================== -->
+        <div
+            x-show="showPreviewModal"
+            x-cloak
+            @keydown.escape.window="showPreviewModal = false"
+            class="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-3 sm:p-6"
+        >
+            <div
+                @click.outside="showPreviewModal = false"
+                class="bg-white border border-slate-300 rounded-lg shadow-xl w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden"
+            >
+                <!-- Modal Header -->
+                <div class="px-4 py-3 bg-slate-100 border-b border-slate-300 flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="px-2 py-0.5 text-[11px] font-bold uppercase tracking-wide bg-blue-100 text-blue-800 border border-blue-200 rounded">
+                            Document Verification
+                        </span>
+                        <span class="font-mono text-xs font-semibold text-slate-900 truncate" x-text="uploadedFileName || 'Uploaded PDS'"></span>
+                        <template x-if="applicantName">
+                            <span class="text-xs text-slate-500 truncate">• <span class="font-semibold text-slate-700" x-text="applicantName"></span></span>
+                        </template>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <!-- Toggle between Native PDF Frame and Rendered Pages when both exist -->
+                        <template x-if="rawPdfObjectUrl && previewPageImages.length > 0">
+                            <div class="inline-flex rounded border border-slate-300 bg-white overflow-hidden text-xs font-medium">
+                                <button
+                                    type="button"
+                                    @click="previewViewMode = 'pdf'"
+                                    :class="previewViewMode === 'pdf' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'"
+                                    class="px-2.5 py-1 transition"
+                                >
+                                    PDF Viewer
+                                </button>
+                                <button
+                                    type="button"
+                                    @click="previewViewMode = 'pages'"
+                                    :class="previewViewMode === 'pages' ? 'bg-slate-900 text-white' : 'text-slate-700 hover:bg-slate-50'"
+                                    class="px-2.5 py-1 border-l border-slate-300 transition"
+                                >
+                                    Page Images (<span x-text="previewPageImages.length"></span>)
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Zoom Controls for Image / Page View -->
+                        <template x-if="previewViewMode === 'pages' || !rawPdfObjectUrl">
+                            <div class="inline-flex items-center rounded border border-slate-300 bg-white text-xs font-medium">
+                                <button
+                                    type="button"
+                                    @click="previewZoom = Math.max(60, previewZoom - 20)"
+                                    class="px-2 py-1 text-slate-700 hover:bg-slate-50"
+                                    title="Zoom Out"
+                                >
+                                    −
+                                </button>
+                                <span class="px-2 py-1 font-mono text-[11px] tabular-nums border-x border-slate-200 text-slate-700" x-text="previewZoom + '%'"></span>
+                                <button
+                                    type="button"
+                                    @click="previewZoom = Math.min(200, previewZoom + 20)"
+                                    class="px-2 py-1 text-slate-700 hover:bg-slate-50"
+                                    title="Zoom In"
+                                >
+                                    +
+                                </button>
+                            </div>
+                        </template>
+
+                        <!-- Open in New Tab Button -->
+                        <template x-if="rawPdfObjectUrl">
+                            <a
+                                :href="rawPdfObjectUrl"
+                                target="_blank"
+                                rel="noopener"
+                                class="px-2.5 py-1 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50"
+                            >
+                                Open in New Tab ↗
+                            </a>
+                        </template>
+
+                        <button
+                            type="button"
+                            @click="showPreviewModal = false"
+                            class="px-3 py-1 text-xs font-semibold text-white bg-slate-900 rounded hover:bg-slate-800 transition"
+                        >
+                            Close ✕
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Modal Body -->
+                <div class="flex-1 bg-slate-800 overflow-auto flex flex-col items-center">
+                    <!-- 1. Native Interactive PDF Embed -->
+                    <template x-if="rawPdfObjectUrl && previewViewMode === 'pdf'">
+                        <iframe
+                            :src="rawPdfObjectUrl"
+                            class="w-full h-full border-0 bg-slate-800"
+                            title="Uploaded PDS PDF Verification Preview"
+                        ></iframe>
+                    </template>
+
+                    <!-- 2. Rendered Pages / Uploaded Images Gallery -->
+                    <template x-if="(!rawPdfObjectUrl || previewViewMode === 'pages') && previewPageImages.length > 0">
+                        <div class="w-full p-4 sm:p-6 space-y-6 flex flex-col items-center">
+                            <template x-for="(imgSrc, idx) in previewPageImages" :key="idx">
+                                <div
+                                    :style="'width: ' + previewZoom + '%; max-width: 1400px;'"
+                                    class="bg-white rounded shadow-lg overflow-hidden border border-slate-700 transition-all"
+                                >
+                                    <div class="px-3 py-1.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-[11px] font-mono text-slate-600">
+                                        <span x-text="'Page / Image ' + (idx + 1) + ' of ' + previewPageImages.length"></span>
+                                        <span x-text="uploadedFileName"></span>
+                                    </div>
+                                    <img
+                                        :src="imgSrc"
+                                        :alt="'Uploaded PDS Page ' + (idx + 1)"
+                                        class="w-full h-auto block"
+                                    >
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+            </div>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- IN-APP CONFIRMATION MODAL (FOR CLEAR ALL & LOCK WORKSPACE)      -->
+        <!-- =============================================================== -->
+        <div
+            x-show="confirmDialog.open"
+            x-cloak
+            @keydown.escape.window="confirmDialog.open = false"
+            class="no-print fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4"
+        >
+            <div
+                @click.outside="confirmDialog.open = false"
+                class="bg-white border border-slate-300 rounded-lg shadow-xl w-full max-w-sm overflow-hidden"
+            >
+                <div class="p-5">
+                    <h3 class="text-sm font-bold text-slate-900" x-text="confirmDialog.title"></h3>
+                    <p class="mt-1.5 text-xs text-slate-600 leading-relaxed" x-text="confirmDialog.message"></p>
+                </div>
+                <div class="px-5 py-3 bg-slate-50 border-t border-slate-200 flex items-center justify-end gap-2">
+                    <button
+                        type="button"
+                        @click="confirmDialog.open = false"
+                        class="px-3 py-1.5 text-xs font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-100 transition"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        @click="executeConfirmAction()"
+                        :class="confirmDialog.danger ? 'bg-red-600 hover:bg-red-700 text-white' : 'bg-slate-900 hover:bg-slate-800 text-white'"
+                        class="px-3.5 py-1.5 text-xs font-semibold rounded transition"
+                        x-text="confirmDialog.confirmText"
+                    ></button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- ======================================================================= -->
@@ -1079,9 +1321,25 @@
 
             return {
                 passcodeEnabled: Boolean(config.passcodeEnabled),
+                activeLeftTab: 'trainings', // 'trainings' | 'work'
                 applicantName: '',
                 targetPosition: '',
                 uploadedFileName: '',
+                showPreviewModal: false,
+                previewViewMode: 'pdf', // 'pdf' | 'pages'
+                previewZoom: 100,
+                rawPdfObjectUrl: '',
+                previewPageImages: [],
+                convertedRawText: '',
+                showConvertedText: false,
+                confirmDialog: {
+                    open: false,
+                    title: '',
+                    message: '',
+                    confirmText: 'Confirm',
+                    danger: true,
+                    action: null
+                },
                 trainings: [],
                 workExperiences: [],
                 trainingSearch: '',
@@ -1157,6 +1415,25 @@
                     return `${dd}/${mm}/${yyyy}`;
                 },
 
+                get hasFilePreview() {
+                    return Boolean(this.rawPdfObjectUrl) || this.previewPageImages.length > 0;
+                },
+
+                openFilePreview() {
+                    if (!this.hasFilePreview) return;
+                    this.previewViewMode = this.rawPdfObjectUrl ? 'pdf' : 'pages';
+                    this.showPreviewModal = true;
+                },
+
+                blobToDataUrl(blob) {
+                    return new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+                        reader.onerror = () => resolve('');
+                        reader.readAsDataURL(blob);
+                    });
+                },
+
                 get hasAnyData() {
                     return this.trainings.length > 0 ||
                         this.workExperiences.length > 0 ||
@@ -1221,6 +1498,7 @@
                 },
 
                 addTrainingRow(openEditor = true, prefill = {}) {
+                    this.activeLeftTab = 'trainings';
                     this.trainings.push({
                         id: this.generateId('tr'),
                         training_title: prefill.training_title ?? '',
@@ -1239,6 +1517,7 @@
                 },
 
                 addWorkRow(openEditor = true, prefill = {}) {
+                    this.activeLeftTab = 'work';
                     const row = {
                         id: this.generateId('wk'),
                         position_title: prefill.position_title ?? '',
@@ -1447,16 +1726,57 @@
                     this.scanNotice = { type: 'info', message: '' };
                 },
 
+                reparseConvertedText() {
+                    if (!this.convertedRawText.trim()) return;
+                    const parsed = this.parseCSForm212TextLocally(this.convertedRawText);
+                    const total = parsed.trainings.length + parsed.work_experience.length;
+                    if (total > 0) {
+                        if (parsed.applicant_name && !this.applicantName.trim()) {
+                            this.applicantName = parsed.applicant_name;
+                        }
+                        this.applyExtractedRows(parsed.trainings, parsed.work_experience);
+                        this.scanNotice = {
+                            type: 'info',
+                            message: `Parsed converted text: Extracted ${parsed.trainings.length} training(s) and ${parsed.work_experience.length} work experience item(s).`
+                        };
+                    } else {
+                        this.scanNotice = {
+                            type: 'error',
+                            message: 'No standard CS Form 212 date rows matched in the edited text.'
+                        };
+                    }
+                },
+
                 clearAll() {
                     if (this.hasAnyData) {
-                        const confirmed = window.confirm('Clear all entries from the current workspace?');
-                        if (!confirmed) return;
+                        this.confirmDialog = {
+                            open: true,
+                            title: 'Clear Current Workspace',
+                            message: 'Are you sure you want to remove all loaded Trainings, Work Experience rows, and uploaded file preview from this screen?',
+                            confirmText: 'Clear All',
+                            danger: true,
+                            action: () => this.performClearAll()
+                        };
+                        return;
                     }
+                    this.performClearAll();
+                },
+
+                performClearAll() {
                     this.trainings = [];
                     this.workExperiences = [];
                     this.applicantName = '';
                     this.targetPosition = '';
                     this.uploadedFileName = '';
+                    if (this.rawPdfObjectUrl) {
+                        URL.revokeObjectURL(this.rawPdfObjectUrl);
+                    }
+                    this.rawPdfObjectUrl = '';
+                    this.previewPageImages = [];
+                    this.convertedRawText = '';
+                    this.showConvertedText = false;
+                    this.showPreviewModal = false;
+                    this.confirmDialog.open = false;
                     this.trainingSearch = '';
                     this.workSearch = '';
                     this.scanNotice = { type: 'info', message: '' };
@@ -1467,11 +1787,23 @@
                     window.print();
                 },
 
-                async lockWorkspace() {
+                lockWorkspace() {
                     if (this.hasAnyData) {
-                        const confirmed = window.confirm('Lock workspace and clear current session data?');
-                        if (!confirmed) return;
+                        this.confirmDialog = {
+                            open: true,
+                            title: 'Lock Workspace',
+                            message: 'Lock this session and clear all loaded PDS data from this browser tab?',
+                            confirmText: 'Lock Session',
+                            danger: false,
+                            action: () => this.performLockWorkspace()
+                        };
+                        return;
                     }
+                    this.performLockWorkspace();
+                },
+
+                async performLockWorkspace() {
+                    this.confirmDialog.open = false;
                     sessionStorage.removeItem(STORAGE_KEY);
                     try {
                         await fetch('{{ route('pds.lock') }}', {
@@ -1483,6 +1815,14 @@
                         });
                     } finally {
                         window.location.reload();
+                    }
+                },
+
+                executeConfirmAction() {
+                    const fn = this.confirmDialog.action;
+                    this.confirmDialog.open = false;
+                    if (typeof fn === 'function') {
+                        fn();
                     }
                 },
 
@@ -1565,13 +1905,26 @@
 
                     try {
                         let combinedTextBlocks = [];
+                        let all2DItems = [];
                         let pageImageBlobs = [];
                         let pageCountScanned = 0;
+
+                        if (this.rawPdfObjectUrl) {
+                            URL.revokeObjectURL(this.rawPdfObjectUrl);
+                            this.rawPdfObjectUrl = '';
+                        }
+                        const newPreviewImages = [];
 
                         for (const file of files) {
                             if (this.scanCancelled) return;
                             const ext = (file.name.split('.').pop() || '').toLowerCase();
                             const isPdf = ext === 'pdf' || file.type === 'application/pdf';
+
+                            if (isPdf) {
+                                if (!this.rawPdfObjectUrl) {
+                                    this.rawPdfObjectUrl = URL.createObjectURL(file);
+                                }
+                            }
 
                             if (isPdf && window.pdfjsLib) {
                                 this.scanStageLabel = 'Reading PDF';
@@ -1581,32 +1934,60 @@
                                 if (pdfResult.text.trim()) {
                                     combinedTextBlocks.push(pdfResult.text);
                                 }
+                                if (pdfResult.items2D.length > 0) {
+                                    all2DItems.push(...pdfResult.items2D);
+                                }
                                 if (pdfResult.renderedPageBlobs.length > 0) {
                                     pageImageBlobs.push(...pdfResult.renderedPageBlobs);
+                                    for (const b of pdfResult.renderedPageBlobs) {
+                                        const dataUrl = await this.blobToDataUrl(b);
+                                        if (dataUrl) newPreviewImages.push(dataUrl);
+                                    }
                                 }
                             } else if (!isPdf) {
                                 pageCountScanned += 1;
-                                this.scanStageLabel = 'Optimizing page';
-                                const compressed = await this.compressImageForFastUpload(file);
-                                pageImageBlobs.push(compressed);
+                                this.scanStageLabel = 'Reading image';
+                                if (this.scanEngine === 'local') {
+                                    pageImageBlobs.push(file);
+                                    const compressed = await this.compressImageForFastUpload(file);
+                                    const dataUrl = await this.blobToDataUrl(compressed);
+                                    if (dataUrl) newPreviewImages.push(dataUrl);
+                                } else {
+                                    const compressed = await this.compressImageForFastUpload(file);
+                                    pageImageBlobs.push(compressed);
+                                    const dataUrl = await this.blobToDataUrl(compressed);
+                                    if (dataUrl) newPreviewImages.push(dataUrl);
+                                }
                             }
+                        }
+
+                        if (newPreviewImages.length > 0) {
+                            this.previewPageImages = newPreviewImages;
+                            this.saveToSessionStorage();
                         }
 
                         if (this.scanCancelled) return;
 
                         const fullExtractedText = combinedTextBlocks.join('\n');
 
-                        // 1. LOCAL OCR / PDF ONLY MODE
+                        // 1. LOCAL OCR / PDF ONLY MODE (2-Stage: PDF/Image -> Converted Text -> Structured Tables)
                         if (this.scanEngine === 'local') {
                             let ocrText = '';
-                            if (pageImageBlobs.length > 0 && window.Tesseract) {
-                                this.scanStageLabel = 'Local OCR';
-                                ocrText = await this.runTesseractOcrOnBlobs(pageImageBlobs);
+                            if (all2DItems.length < 30 && pageImageBlobs.length > 0) {
+                                this.scanStageLabel = 'Stage 1: Image to Text';
+                                const ocrResult = await this.runTesseractOcrOnBlobs(pageImageBlobs);
+                                ocrText = ocrResult.text;
+                                if (ocrResult.items2D.length > 0) {
+                                    all2DItems.push(...ocrResult.items2D);
+                                }
                             }
                             if (this.scanCancelled) return;
 
                             const combinedLocalText = [fullExtractedText, ocrText].filter(Boolean).join('\n');
-                            const localParsed = this.parseCSForm212TextLocally(combinedLocalText);
+                            this.convertedRawText = combinedLocalText;
+
+                            this.scanStageLabel = 'Stage 2: Structuring Text';
+                            const localParsed = this.parseCombined2DAndTextLocally(all2DItems, combinedLocalText);
                             const localCount = localParsed.trainings.length + localParsed.work_experience.length;
 
                             if (localCount > 0) {
@@ -1616,19 +1997,20 @@
                                 this.applyExtractedRows(localParsed.trainings, localParsed.work_experience);
                                 this.scanNotice = {
                                     type: 'info',
-                                    message: `Local Parser (${this.scanElapsed.toFixed(1)}s across ${pageCountScanned} page(s)): Extracted ${localParsed.trainings.length} training(s) and ${localParsed.work_experience.length} work experience item(s).`
+                                    message: `PDF/OCR-to-Text Parser (${this.scanElapsed.toFixed(1)}s across ${pageCountScanned} page(s)): Extracted ${localParsed.trainings.length} training(s) and ${localParsed.work_experience.length} work experience item(s).`
                                 };
                             } else {
                                 this.scanNotice = {
                                     type: 'error',
-                                    message: `Local Parser finished (${this.scanElapsed.toFixed(1)}s), but no rows matched. Switch to "Hybrid (Multi-Page + AI Turbo)" or add rows manually.`
+                                    message: `Stage 1 converted document to text (${this.scanElapsed.toFixed(1)}s), but no standard date rows matched. Click "View Converted Text" to inspect or switch to Hybrid mode.`
                                 };
                             }
                             return;
                         }
 
-                        // 2. HYBRID OR GEMINI VISION TURBO MODE
-                        const localPreParsed = this.parseCSForm212TextLocally(fullExtractedText);
+                        // 2. HYBRID OR GEMINI VISION TURBO MODE (With Automatic Seamless Fallback to Stage 1 Text + Stage 2 Local Structurer!)
+                        this.convertedRawText = fullExtractedText;
+                        const localPreParsed = this.parseCombined2DAndTextLocally(all2DItems, fullExtractedText);
                         this.scanStageLabel = 'AI Multi-Page Scan';
                         this.scanSubStatus = `Analyzing ${pageCountScanned} page(s) for Work Experience & Trainings...`;
 
@@ -1640,12 +2022,37 @@
                             pageCount: pageCountScanned
                         });
 
-                        if (!aiSuccess && (localPreParsed.trainings.length + localPreParsed.work_experience.length) > 0) {
-                            this.applyExtractedRows(localPreParsed.trainings, localPreParsed.work_experience);
-                            this.scanNotice = {
-                                type: 'info',
-                                message: `Used local multi-page fallback: Loaded ${localPreParsed.trainings.length} training(s) and ${localPreParsed.work_experience.length} work experience item(s).`
-                            };
+                        // If Gemini hit a rate limit (429) or failed, AUTOMATICALLY run Stage 1 Image-to-Text + Stage 2 Local Text Structurer!
+                        if (!aiSuccess && !this.scanCancelled) {
+                            this.scanStageLabel = 'Auto-Fallback: OCR to Text';
+                            this.scanSubStatus = 'Converting image/PDF to text and structuring rows...';
+
+                            let fallbackParsed = localPreParsed;
+
+                            if ((fallbackParsed.trainings.length + fallbackParsed.work_experience.length) === 0 && pageImageBlobs.length > 0) {
+                                const ocrResult = await this.runTesseractOcrOnBlobs(pageImageBlobs);
+                                if (this.scanCancelled) return;
+                                const combinedFallbackText = [fullExtractedText, ocrResult.text].filter(Boolean).join('\n');
+                                this.convertedRawText = combinedFallbackText;
+                                fallbackParsed = this.parseCombined2DAndTextLocally([...all2DItems, ...ocrResult.items2D], combinedFallbackText);
+                            }
+
+                            const fallbackCount = fallbackParsed.trainings.length + fallbackParsed.work_experience.length;
+                            if (fallbackCount > 0) {
+                                if (fallbackParsed.applicant_name && (!this.appendOnScan || !this.applicantName.trim())) {
+                                    this.applicantName = fallbackParsed.applicant_name;
+                                }
+                                this.applyExtractedRows(fallbackParsed.trainings, fallbackParsed.work_experience);
+                                this.scanNotice = {
+                                    type: 'info',
+                                    message: `Auto-switched to PDF/OCR-to-Text Parser (${this.scanElapsed.toFixed(1)}s): Extracted ${fallbackParsed.trainings.length} training(s) and ${fallbackParsed.work_experience.length} work experience item(s).`
+                                };
+                            } else {
+                                this.scanNotice = {
+                                    type: 'error',
+                                    message: 'Could not detect standard CS Form 212 rows on this image. Click "View Converted Text" or add rows manually.'
+                                };
+                            }
                         }
                     } catch (err) {
                         if (!this.scanCancelled) {
@@ -1676,6 +2083,7 @@
                     const numPages = pdf.numPages;
 
                     const allLines = [];
+                    const items2D = [];
                     const renderedPageBlobs = [];
 
                     for (let pageNum = 1; pageNum <= numPages; pageNum++) {
@@ -1683,11 +2091,14 @@
                         this.scanSubStatus = `Reading PDF page ${pageNum} of ${numPages}...`;
 
                         const page = await pdf.getPage(pageNum);
+                        const baseVp = page.getViewport({ scale: 1.0 });
+                        const pageWidth = baseVp.width || 612;
                         const textContent = await page.getTextContent();
                         const items = textContent.items || [];
 
                         let pageChars = 0;
                         const rowsByY = [];
+                        const page2D = [];
 
                         for (const item of items) {
                             const str = String(item.str || '').trim();
@@ -1695,8 +2106,17 @@
                             pageChars += str.length;
                             const x = item.transform ? item.transform[4] : 0;
                             const y = item.transform ? item.transform[5] : 0;
+                            const w = item.width || (str.length * 4.5);
 
-                            // 7.5px vertical tolerance keeps slightly offset table cells in the same row
+                            page2D.push({
+                                str,
+                                x,
+                                y,
+                                width: w,
+                                pageWidth,
+                                pageNum
+                            });
+
                             let existingRow = rowsByY.find(r => Math.abs(r.y - y) <= 7.5);
                             if (!existingRow) {
                                 existingRow = { y, cells: [] };
@@ -1725,7 +2145,6 @@
                         const pageText = pageLines.join('\n');
                         const upperPage = pageText.toUpperCase();
 
-                        // Identify if this page is strictly Page 1 (Personal/Family/Education only) or Page 4 (Legal/References/Oath only)
                         const hasWorkOrTrainingHeader =
                             upperPage.includes('WORK EXPERIENCE') ||
                             upperPage.includes('LEARNING AND DEVELOPMENT') ||
@@ -1747,25 +2166,20 @@
                         if (isCandidatePage && pageLines.length > 0) {
                             allLines.push(`=== PDF PAGE ${pageNum} ===`);
                             allLines.push(...pageLines);
+                            items2D.push(...page2D);
                         } else if (isPurePage1 && pageLines.length > 0) {
-                            // Include top lines of Page 1 (Section I: Surname / First Name / Middle Name) for applicant name detection
                             allLines.push(`=== PDF PAGE 1 HEADER (NAME ONLY) ===`);
                             allLines.push(...pageLines.slice(0, 18));
                         }
 
-                        // Render the page to a fast compressed JPEG if:
-                        // - Engine is 'gemini', OR
-                        // - This page has very little selectable text (e.g. an image/scanned page inside the PDF!), OR
-                        // - It is a candidate page (Page 2 / Page 3 / Work Experience / Trainings page) and we have <= 4 rendered pages
                         const shouldRenderPageImage =
                             this.scanEngine === 'gemini'
                                 ? isCandidatePage
                                 : (pageChars < 180 || (isCandidatePage && renderedPageBlobs.length < 4));
 
                         if (shouldRenderPageImage && renderedPageBlobs.length < 5) {
-                            this.scanSubStatus = `Rendering page ${pageNum} of ${numPages} for multi-page vision...`;
-                            const baseViewport = page.getViewport({ scale: 1.0 });
-                            const targetScale = Math.min(2.0, Math.max(1.3, 1350 / Math.max(baseViewport.width, baseViewport.height)));
+                            this.scanSubStatus = `Rendering page ${pageNum} of ${numPages}...`;
+                            const targetScale = Math.min(2.2, Math.max(1.4, 1500 / Math.max(baseVp.width, baseVp.height)));
                             const viewport = page.getViewport({ scale: targetScale });
 
                             const canvas = document.createElement('canvas');
@@ -1776,7 +2190,7 @@
                             ctx.fillRect(0, 0, canvas.width, canvas.height);
                             await page.render({ canvasContext: ctx, viewport }).promise;
 
-                            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.84));
+                            const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.86));
                             if (blob) {
                                 renderedPageBlobs.push(blob);
                             }
@@ -1786,28 +2200,466 @@
                     return {
                         numPages,
                         text: allLines.join('\n'),
+                        items2D,
                         renderedPageBlobs
                     };
                 },
 
+                /**
+                 * Stage 1 Image-to-Text Converter (Zero Gemini API Quota Used):
+                 * 1. Converts uploaded page images into Tab-Separated Table Text + 2D word coordinates
+                 *    using Table OCR Engine 2 (`scan_mode=ocr_text_only`).
+                 * 2. Falls back to in-browser Tesseract.js LSTM OCR if offline.
+                 */
                 async runTesseractOcrOnBlobs(blobs) {
                     const textSegments = [];
+                    const items2D = [];
+
+                    // Preprocess blobs to erase vertical table border lines touching characters while preserving anti-aliased text
+                    const preparedPages = [];
                     for (let i = 0; i < blobs.length; i++) {
                         if (this.scanCancelled) break;
-                        const pageLabel = blobs.length > 1 ? ` (Page ${i + 1}/${blobs.length})` : '';
-                        const result = await window.Tesseract.recognize(blobs[i], 'eng', {
+                        const enhanced = await this.preprocessBlobForOcr(blobs[i]);
+                        preparedPages.push(enhanced);
+                    }
+
+                    // Try Stage 1 Table OCR-to-Text first (fast tab-separated table extraction, zero Gemini quota)
+                    try {
+                        this.scanSubStatus = `Converting ${preparedPages.length} page image(s) to table text...`;
+                        const formData = new FormData();
+                        formData.append('scan_mode', 'ocr_text_only');
+                        preparedPages.forEach((p, idx) => {
+                            formData.append('page_images[]', p.blob, `ocr_page_${idx + 1}.jpg`);
+                        });
+
+                        const res = await fetch('{{ route('pds.scan') }}', {
+                            method: 'POST',
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]').content
+                            },
+                            body: formData,
+                            signal: this.abortController?.signal
+                        });
+
+                        if (res.ok) {
+                            const data = await res.json().catch(() => ({}));
+                            if (data.ok && data.converted_text) {
+                                const cleanText = String(data.converted_text)
+                                    .replace(/\[Note:[^\]]*\]/gi, '')
+                                    .trim();
+                                const clean2D = (Array.isArray(data.items_2d) ? data.items_2d : [])
+                                    .filter(it => !/^\[?Note:/i.test(String(it.str || '')));
+                                return {
+                                    text: cleanText,
+                                    items2D: clean2D
+                                };
+                            }
+                        }
+                    } catch (e) {
+                        // Fall through to offline in-browser Tesseract.js
+                    }
+
+                    if (!window.Tesseract) {
+                        return { text: '', items2D: [] };
+                    }
+
+                    let worker = null;
+                    try {
+                        worker = await window.Tesseract.createWorker('eng', 1, {
                             logger: m => {
                                 if (m.status === 'recognizing text' && typeof m.progress === 'number') {
                                     const pct = Math.round(m.progress * 100);
-                                    this.scanSubStatus = `Running browser OCR${pageLabel}: ${pct}% completed...`;
+                                    this.scanSubStatus = `Offline Browser OCR: ${pct}% completed...`;
                                 }
                             }
                         });
-                        if (result?.data?.text) {
-                            textSegments.push(`=== OCR PAGE ${i + 1} ===\n` + result.data.text);
+                        await worker.setParameters({
+                            preserve_interword_spaces: '1'
+                        });
+                    } catch (workerErr) {
+                        worker = null;
+                    }
+
+                    try {
+                        for (let i = 0; i < preparedPages.length; i++) {
+                            if (this.scanCancelled) break;
+                            const enhanced = preparedPages[i];
+
+                            const result = worker
+                                ? await worker.recognize(enhanced.blob)
+                                : await window.Tesseract.recognize(enhanced.blob, 'eng');
+
+                            if (result?.data?.text) {
+                                textSegments.push(`=== OCR PAGE ${i + 1} ===\n` + result.data.text);
+                            }
+
+                            const words = result?.data?.words || [];
+                            const pageW = enhanced.width || 1600;
+                            const pageH = enhanced.height || 1200;
+
+                            for (const w of words) {
+                                const txt = String(w.text || '').trim();
+                                if (!txt || (w.confidence !== undefined && w.confidence < 20)) continue;
+                                const x0 = w.bbox?.x0 ?? 0;
+                                const y0 = w.bbox?.y0 ?? 0;
+                                const x1 = w.bbox?.x1 ?? (x0 + txt.length * 8);
+                                items2D.push({
+                                    str: txt,
+                                    x: x0,
+                                    y: pageH - y0,
+                                    width: Math.max(4, x1 - x0),
+                                    pageWidth: pageW,
+                                    pageNum: 100 + i
+                                });
+                            }
+                        }
+                    } finally {
+                        if (worker) {
+                            await worker.terminate().catch(() => {});
                         }
                     }
-                    return textSegments.join('\n');
+
+                    return {
+                        text: textSegments.join('\n'),
+                        items2D
+                    };
+                },
+
+                /**
+                 * Non-Destructive Vertical Table Border Eraser for CS Form No. 212 Images:
+                 * Preserves 100% of original anti-aliased text pixels, and ONLY erases
+                 * continuous vertical table column divider lines (spanning >= 18% of image height)
+                 * so numbers/letters touching vertical table borders (e.g. "|16.0", "|24.0", "|CSC", "|PSA")
+                 * are cleanly separated from the table grid before Stage 1 OCR-to-Text.
+                 */
+                async preprocessBlobForOcr(blob) {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        const url = URL.createObjectURL(blob);
+                        img.onload = () => {
+                            URL.revokeObjectURL(url);
+                            let { width, height } = img;
+                            if (width < 1500) {
+                                const scale = Math.min(2.0, 1600 / width);
+                                width = Math.round(width * scale);
+                                height = Math.round(height * scale);
+                            }
+
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.imageSmoothingEnabled = true;
+                            ctx.imageSmoothingQuality = 'high';
+                            ctx.fillStyle = '#ffffff';
+                            ctx.fillRect(0, 0, width, height);
+                            ctx.drawImage(img, 0, 0, width, height);
+
+                            try {
+                                const imgData = ctx.getImageData(0, 0, width, height);
+                                const data = imgData.data;
+                                const minVertLineLen = Math.max(75, Math.round(height * 0.18));
+
+                                const getLum = (x, y) => {
+                                    const idx = (y * width + x) * 4;
+                                    return 0.299 * data[idx] + 0.587 * data[idx + 1] + 0.114 * data[idx + 2];
+                                };
+
+                                for (let x = 0; x < width; x++) {
+                                    let runStart = -1;
+                                    for (let y = 0; y < height; y++) {
+                                        if (getLum(x, y) < 178) {
+                                            if (runStart === -1) runStart = y;
+                                        } else {
+                                            if (runStart !== -1 && (y - runStart) >= minVertLineLen) {
+                                                for (let k = runStart; k < y; k++) {
+                                                    const pIdx = (k * width + x) * 4;
+                                                    data[pIdx] = 255;
+                                                    data[pIdx + 1] = 255;
+                                                    data[pIdx + 2] = 255;
+                                                }
+                                            }
+                                            runStart = -1;
+                                        }
+                                    }
+                                    if (runStart !== -1 && (height - runStart) >= minVertLineLen) {
+                                        for (let k = runStart; k < height; k++) {
+                                            const pIdx = (k * width + x) * 4;
+                                            data[pIdx] = 255;
+                                            data[pIdx + 1] = 255;
+                                            data[pIdx + 2] = 255;
+                                        }
+                                    }
+                                }
+
+                                ctx.putImageData(imgData, 0, 0);
+                            } catch (e) {
+                                // Keep original canvas if pixel inspection fails
+                            }
+
+                            canvas.toBlob(outBlob => {
+                                resolve({ blob: outBlob || blob, width, height });
+                            }, 'image/jpeg', 0.92);
+                        };
+                        img.onerror = () => {
+                            URL.revokeObjectURL(url);
+                            resolve({ blob, width: 1600, height: 1200 });
+                        };
+                        img.src = url;
+                    });
+                },
+
+                /**
+                 * Combined 2D Spatial Grid + Line Parser:
+                 * Uses 2D (X, Y) coordinates from PDF.js / Tesseract bounding boxes to accurately
+                 * reconstruct multi-line table cells in Section V (Work Experience) and Section VII (Trainings),
+                 * then merges with the line-based parser so zero rows are missed.
+                 */
+                parseCombined2DAndTextLocally(items2D, rawText) {
+                    const lineParsed = this.parseCSForm212TextLocally(rawText);
+                    if (!Array.isArray(items2D) || items2D.length === 0) {
+                        return lineParsed;
+                    }
+
+                    const gridParsed = this.parse2DCoordinatesCSForm212(items2D);
+
+                    const mergedTrainings = this.deduplicateRows(
+                        [...gridParsed.trainings, ...lineParsed.trainings],
+                        'training_title'
+                    );
+                    const mergedWork = this.deduplicateRows(
+                        [...gridParsed.work_experience, ...lineParsed.work_experience],
+                        'position_title'
+                    );
+
+                    return {
+                        applicant_name: lineParsed.applicant_name || '',
+                        trainings: mergedTrainings,
+                        work_experience: mergedWork
+                    };
+                },
+
+                /**
+                 * 2D Spatial Coordinate Table Reconstructor for CS Form No. 212:
+                 * Anchors on inclusive date pairs (From / To) and collects multi-line cell text
+                 * within each row's vertical [yTop, yBottom] band and horizontal X column boundaries.
+                 */
+                parse2DCoordinatesCSForm212(items2D) {
+                    const trainings = [];
+                    const work_experience = [];
+
+                    const dateExtractRegex = /(\d{1,2}[\/\-\.]\d{1,2}[\/\-\.]\d{2,4})/g;
+                    const presentExtractRegex = /\b(PRESENT|CURRENT|ONGOING)\b/i;
+                    const knownStatuses = [
+                        'PERMANENT', 'COSW', 'CONTRACT OF SERVICE/JOB ORDER', 'CONTRACT OF SERVICE',
+                        'CONTRACTUAL', 'CASUAL', 'JOB ORDER', 'INTERNSHIP', 'PROJECT-BASED',
+                        'PROJECT BASED', 'TEMPORARY', 'COTERMINOUS', 'FIXED TERM', 'PART-TIME', 'FREELANCE'
+                    ];
+                    const knownLdTypes = [
+                        'TECHNICAL', 'MANAGERIAL', 'SUPERVISORY', 'FOUNDATION', 'CLERICAL', 'ADMINISTRATIVE', 'FOUNDATIONAL'
+                    ];
+
+                    const byPage = {};
+                    for (const it of items2D) {
+                        const p = it.pageNum || 1;
+                        if (!byPage[p]) byPage[p] = [];
+                        byPage[p].push(it);
+                    }
+
+                    for (const pageKey of Object.keys(byPage)) {
+                        const pageItems = byPage[pageKey];
+                        if (pageItems.length < 5) continue;
+
+                        const pageW = pageItems[0].pageWidth || 612;
+                        const sf = Math.max(1.0, pageW / 612); // Scale factor for 2000px OCR images vs 612px PDFs
+
+                        const dateTokens = [];
+                        for (const it of pageItems) {
+                            const raw = String(it.str || '').trim();
+                            const matches = Array.from(raw.matchAll(dateExtractRegex));
+                            if (matches.length >= 2) {
+                                dateTokens.push({
+                                    str: matches[0][1],
+                                    x: it.x,
+                                    y: it.y,
+                                    width: (it.width || 45 * sf) * 0.48,
+                                    isDate: true
+                                });
+                                dateTokens.push({
+                                    str: matches[1][1],
+                                    x: it.x + (it.width || 90 * sf) * 0.52,
+                                    y: it.y,
+                                    width: (it.width || 45 * sf) * 0.48,
+                                    isDate: true
+                                });
+                                continue;
+                            }
+                            if (matches.length === 1) {
+                                dateTokens.push({
+                                    str: matches[0][1],
+                                    x: it.x,
+                                    y: it.y,
+                                    width: it.width || (42 * sf),
+                                    isDate: true
+                                });
+                                continue;
+                            }
+                            if (presentExtractRegex.test(raw)) {
+                                dateTokens.push({
+                                    str: 'PRESENT',
+                                    x: it.x,
+                                    y: it.y,
+                                    width: it.width || (42 * sf),
+                                    isPresent: true
+                                });
+                            }
+                        }
+
+                        // Pair up (date_from, date_to) tokens on the same horizontal row
+                        const ySameLineTol = 10.5 * sf;
+                        dateTokens.sort((a, b) => b.y - a.y || a.x - b.x);
+                        const dateRows = [];
+                        const used = new Set();
+
+                        for (let i = 0; i < dateTokens.length; i++) {
+                            if (used.has(i)) continue;
+                            const t1 = dateTokens[i];
+                            if (t1.isPresent) continue;
+
+                            let bestIdx = -1;
+                            for (let j = 0; j < dateTokens.length; j++) {
+                                if (i === j || used.has(j)) continue;
+                                const t2 = dateTokens[j];
+                                if (Math.abs(t1.y - t2.y) <= ySameLineTol && t2.x > t1.x && (t2.x - t1.x) < pageW * 0.28) {
+                                    if (bestIdx === -1 || t2.x < dateTokens[bestIdx].x) {
+                                        bestIdx = j;
+                                    }
+                                }
+                            }
+
+                            if (bestIdx !== -1) {
+                                used.add(i);
+                                used.add(bestIdx);
+                                const t2 = dateTokens[bestIdx];
+                                dateRows.push({
+                                    y: (t1.y + t2.y) / 2,
+                                    xFrom: t1.x,
+                                    xTo: t2.x + (t2.width || 40 * sf),
+                                    dateFrom: this.normalizeLocalDate(t1.str, false),
+                                    dateTo: this.normalizeLocalDate(t2.str, true)
+                                });
+                            }
+                        }
+
+                        dateRows.sort((a, b) => b.y - a.y);
+
+                        for (let rIdx = 0; rIdx < dateRows.length; rIdx++) {
+                            const dr = dateRows[rIdx];
+                            const prevY = rIdx > 0 ? dateRows[rIdx - 1].y : dr.y + (26 * sf);
+                            const nextY = rIdx < dateRows.length - 1 ? dateRows[rIdx + 1].y : dr.y - (26 * sf);
+
+                            const halfUp = Math.min(20 * sf, Math.max(8 * sf, (prevY - dr.y) * 0.48));
+                            const halfDown = Math.min(20 * sf, Math.max(8 * sf, (dr.y - nextY) * 0.48));
+                            const yTop = dr.y + halfUp;
+                            const yBottom = dr.y - halfDown;
+
+                            const bandItems = pageItems.filter(it => {
+                                if (it.y > yTop || it.y < yBottom) return false;
+                                if (Math.abs(it.y - dr.y) <= ySameLineTol && it.x >= dr.xFrom - (6 * sf) && it.x <= dr.xTo + (4 * sf)) {
+                                    return false;
+                                }
+                                return true;
+                            });
+
+                            const sortReadingOrder = (arr) => {
+                                return arr.slice().sort((a, b) => {
+                                    if (Math.abs(a.y - b.y) > (6 * sf)) return b.y - a.y;
+                                    return a.x - b.x;
+                                });
+                            };
+
+                            if (dr.xFrom < pageW * 0.27) {
+                                // WORK EXPERIENCE ROW (Section V)
+                                const rightItems = bandItems.filter(it => it.x >= dr.xTo - (6 * sf));
+                                if (rightItems.length === 0) continue;
+
+                                const posItems = sortReadingOrder(rightItems.filter(it => it.x < pageW * 0.445));
+                                const compItems = sortReadingOrder(rightItems.filter(it => it.x >= pageW * 0.445 && it.x < pageW * 0.685));
+                                const tailItems = sortReadingOrder(rightItems.filter(it => it.x >= pageW * 0.685));
+
+                                let posTitle = posItems.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
+                                let company = compItems.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
+                                const tailStr = tailItems.map(it => it.str).join(' ').replace(/\s+/g, ' ').trim();
+
+                                if (!posTitle && company) {
+                                    posTitle = company;
+                                    company = '';
+                                }
+
+                                let govService = 'N';
+                                const govMatch = tailStr.match(/\b(Y|N|YES|NO)$/i);
+                                if (govMatch) {
+                                    govService = govMatch[1].toUpperCase().startsWith('Y') ? 'Y' : 'N';
+                                }
+
+                                let status = 'COSW';
+                                for (const ks of knownStatuses) {
+                                    if (tailStr.toUpperCase().includes(ks)) {
+                                        status = ks;
+                                        break;
+                                    }
+                                }
+
+                                if (posTitle && !['N/A', 'NONE', 'POSITION TITLE'].includes(posTitle.toUpperCase())) {
+                                    work_experience.push({
+                                        position_title: posTitle,
+                                        department_agency_company: company,
+                                        date_from: dr.dateFrom,
+                                        date_to: dr.dateTo,
+                                        status_of_appointment: status,
+                                        gov_service: govService,
+                                        computed_years: this.computeYearsBetween(dr.dateFrom, dr.dateTo, 0.0)
+                                    });
+                                }
+                            } else {
+                                // LEARNING & DEVELOPMENT / TRAINING ROW (Section VII)
+                                const leftTitleItems = sortReadingOrder(bandItems.filter(it => it.x < dr.xFrom - (6 * sf)));
+                                const rightTailItems = sortReadingOrder(bandItems.filter(it => it.x >= dr.xTo - (6 * sf)));
+
+                                const trainingTitle = leftTitleItems
+                                    .map(it => it.str)
+                                    .join(' ')
+                                    .replace(/^[|!\[\]1-9\.\)\s]+(?=[A-Z]{2,})/, '')
+                                    .replace(/\s+/g, ' ')
+                                    .trim();
+
+                                if (!trainingTitle || trainingTitle.length < 3 || ['N/A', 'NONE'].includes(trainingTitle.toUpperCase())) {
+                                    continue;
+                                }
+
+                                const rightText = rightTailItems.map(it => it.str).join(' ').replace(/[|]/g, ' ').replace(/\s+/g, ' ').trim();
+                                const hrsMatch = rightText.match(/(\d+(?:\.\d+)?)/);
+                                const hours = hrsMatch ? parseFloat(hrsMatch[1]) : 0;
+
+                                let afterHours = hrsMatch
+                                    ? rightText.slice(rightText.indexOf(hrsMatch[0]) + hrsMatch[0].length).trim()
+                                    : rightText;
+                                const parsedTail = this.splitTrainingTail(afterHours, knownLdTypes);
+
+                                trainings.push({
+                                    training_title: trainingTitle,
+                                    date_from: dr.dateFrom,
+                                    date_to: dr.dateTo,
+                                    hours: Number.isFinite(hours) ? hours : 0,
+                                    type_of_ld: parsedTail.typeOfLd,
+                                    conducted_by: parsedTail.conductedBy
+                                });
+                            }
+                        }
+                    }
+
+                    return { trainings, work_experience };
                 },
 
                 async compressImageForFastUpload(file) {
@@ -1876,7 +2728,7 @@
                     if (fileName) {
                         const firstFile = fileName.split(',')[0].trim();
                         const base = firstFile.replace(/\.[^.]+$/, '')
-                            .replace(/\b(PDS|CS\s*FORM\s*212|REVISED\s*2025|2025|2026|2024|PAGE\s*\d+|SCAN|SCREENSHOT|IMG|IMAGE)\b/gi, ' ')
+                            .replace(/\b(PDS|CS\s*FORM\s*212|REVISED\s*2025|2025|2026|2024|PAGE\s*\d+|PAGE\d+|TRAININGS|TRAINING|WORK|EXPERIENCE|LEARNING|DEVELOPMENT|SECTION|SCAN|SCREENSHOT|IMG|IMAGE)\b/gi, ' ')
                             .replace(/[_\-]+/g, ' ')
                             .replace(/\s+/g, ' ')
                             .trim();
@@ -1897,18 +2749,22 @@
 
                     const lines = rawText
                         .split(/\r?\n/)
-                        .map(l => l.replace(/\s+\|\s+/g, '\t').trim())
+                        .map(l => l
+                            .replace(/(\d{1,2})\s*[\/]\s*(\d{1,2})\s*[\/]\s*(\d{2,4})/g, '$1/$2/$3')
+                            .replace(/\s*\|\s*/g, '\t')
+                            .trim()
+                        )
                         .filter(Boolean);
 
                     let currentSection = 'UNKNOWN';
                     let pendingTitleCandidate = '';
 
-                    const datePattern = '\\b(\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4})\\b';
-                    const dateOrPresentPattern = '\\b(\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4}|PRESENT|TO\\s*DATE|CURRENT)\\b';
+                    const datePattern = '(\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4})';
+                    const dateOrPresentPattern = '(\\d{1,2}[\\/\\-\\.]\\d{1,2}[\\/\\-\\.]\\d{2,4}|PRESENT|TO\\s*DATE|CURRENT)';
 
-                    const workRowRegex = new RegExp(`^[^A-Za-z0-9]*(?:\\d{1,2}[\\.\\)]\\s*)?${datePattern}[\\s\\t\\-–toTO]+${dateOrPresentPattern}[\\s\\t]+(.+)$`, 'i');
-                    const trainingRowRegex = new RegExp(`^(.+?)\\s+${datePattern}[\\s\\t\\-–toTO]+${datePattern}[\\s\\t]+(\\d+(?:\\.\\d+)?)[\\s\\t]*(.*)$`, 'i');
-                    const splitTrainingDatesRegex = new RegExp(`^[^A-Za-z0-9]*${datePattern}[\\s\\t\\-–toTO]+${datePattern}[\\s\\t]+(\\d+(?:\\.\\d+)?)[\\s\\t]+(.+)$`, 'i');
+                    const workRowRegex = new RegExp(`^[^A-Za-z0-9]*(?:\\d{1,2}[\\.\\)]\\s*)?${datePattern}[\\s\\t\\-–|toTO]*${dateOrPresentPattern}[\\s\\t|]+(.+)$`, 'i');
+                    const trainingRowRegex = new RegExp(`^(.+?)[\\s\\t|]+${datePattern}[\\s\\t\\-–|toTO]*${datePattern}(?:[\\s\\t|]+(\\d+(?:\\.\\d+)?))?[\\s\\t|]*(.*)$`, 'i');
+                    const splitTrainingDatesRegex = new RegExp(`^[^A-Za-z0-9]*${datePattern}[\\s\\t\\-–|toTO]*${datePattern}(?:[\\s\\t|]+(\\d+(?:\\.\\d+)?))?[\\s\\t|]+(.+)$`, 'i');
 
                     const knownStatuses = [
                         'PERMANENT', 'COSW', 'CONTRACT OF SERVICE', 'CONTRACTUAL', 'CASUAL',
@@ -1971,17 +2827,17 @@
                             continue;
                         }
 
-                        // 1. Standard Training Row: [Title] [DateFrom] [DateTo] [Hours] [Type] [ConductedBy]
+                        // 1. Standard Training Row: [Title] [DateFrom] [DateTo] [Hours (optional if OCR missed cell)] [Type] [ConductedBy]
                         if (currentSection !== 'WORK') {
                             const trMatch = line.match(trainingRowRegex);
                             if (trMatch) {
-                                const rawTitle = trMatch[1].replace(/\t+/g, ' ').trim();
+                                const rawTitle = trMatch[1].replace(/\t+/g, ' ').replace(/^\d{1,2}[\.\)]\s*/, '').trim();
                                 const dateFrom = this.normalizeLocalDate(trMatch[2], false);
                                 const dateTo = this.normalizeLocalDate(trMatch[3], false);
-                                const hours = parseFloat(trMatch[4]);
-                                const tail = trMatch[5].trim();
+                                const hours = trMatch[4] !== undefined && trMatch[4] !== '' ? parseFloat(trMatch[4]) : 8;
+                                const tail = (trMatch[5] || '').trim();
 
-                                if (rawTitle.length >= 3 && !/^\d+$/.test(rawTitle) && Number.isFinite(hours) && hours <= 2000) {
+                                if (rawTitle.length >= 3 && !/^\d+$/.test(rawTitle) && !/^\d{1,2}[\/\-\.]\d{1,2}/.test(rawTitle) && Number.isFinite(hours) && hours <= 2000) {
                                     const parsedTail = this.splitTrainingTail(tail, knownLdTypes);
                                     trainings.push({
                                         training_title: rawTitle,
@@ -2163,13 +3019,7 @@
                     const result = await response.json().catch(() => ({}));
 
                     if (!response.ok || !result.ok) {
-                        if (fallbackLocal && (fallbackLocal.trainings.length + fallbackLocal.work_experience.length) > 0) {
-                            return false;
-                        }
-                        this.scanNotice = {
-                            type: 'error',
-                            message: result.message || 'Extraction failed. Switch engine to "Local OCR / PDF Only" or add rows manually.'
-                        };
+                        // Return false silently so processDocuments automatically triggers Local OCR fallback
                         return false;
                     }
 
@@ -2256,6 +3106,13 @@
                             w.computed_years = this.computeYearsBetween(w.date_from, w.date_to, w.computed_years);
                         }
                     });
+
+                    // Smart auto-switch left tab to whichever section has newly extracted items
+                    if (mappedTrainings.length === 0 && mappedWork.length > 0) {
+                        this.activeLeftTab = 'work';
+                    } else if (mappedTrainings.length > 0) {
+                        this.activeLeftTab = 'trainings';
+                    }
                 },
 
                 deduplicateRows(rows, titleKey) {
@@ -2282,7 +3139,7 @@
 
                 saveToSessionStorage() {
                     try {
-                        const payload = {
+                        const basePayload = {
                             applicantName: this.applicantName,
                             targetPosition: this.targetPosition,
                             uploadedFileName: this.uploadedFileName,
@@ -2290,7 +3147,15 @@
                             trainings: this.trainings.map(t => ({ ...t, editing: false })),
                             workExperiences: this.workExperiences.map(w => ({ ...w, editing: false }))
                         };
-                        sessionStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+                        try {
+                            sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+                                ...basePayload,
+                                previewPageImages: this.previewPageImages.slice(0, 4)
+                            }));
+                        } catch (quotaErr) {
+                            // If images exceed sessionStorage quota, save rows without preview images
+                            sessionStorage.setItem(STORAGE_KEY, JSON.stringify(basePayload));
+                        }
                     } catch (e) {
                         // Ignore storage errors
                     }
@@ -2305,6 +3170,7 @@
                             this.applicantName = parsed.applicantName || '';
                             this.targetPosition = parsed.targetPosition || '';
                             this.uploadedFileName = parsed.uploadedFileName || '';
+                            this.previewPageImages = Array.isArray(parsed.previewPageImages) ? parsed.previewPageImages : [];
                             if (['hybrid', 'local', 'gemini'].includes(parsed.scanEngine)) {
                                 this.scanEngine = parsed.scanEngine;
                             }
@@ -2314,6 +3180,9 @@
                             this.workExperiences = Array.isArray(parsed.workExperiences)
                                 ? parsed.workExperiences.map(w => ({ ...w, editing: false }))
                                 : [];
+                            if (this.trainings.length === 0 && this.workExperiences.length > 0) {
+                                this.activeLeftTab = 'work';
+                            }
                             this.workExperiences.forEach(w => {
                                 if (w.date_from) {
                                     w.computed_years = this.computeYearsBetween(w.date_from, w.date_to, w.computed_years);

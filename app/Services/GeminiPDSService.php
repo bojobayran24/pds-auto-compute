@@ -15,6 +15,110 @@ use Throwable;
 class GeminiPDSService
 {
     /**
+     * Stage 1 Free Table OCR-to-Text Engine (Zero Gemini API Quota Used).
+     * Converts uploaded page images/PDFs into tab-separated table text and 2D word coordinates.
+     *
+     * @param  array<int, UploadedFile>  $files
+     * @return array{converted_text: string, items_2d: array<int, array<string, mixed>>}
+     */
+    public function convertImagesToTextViaTableOcr(array $files): array
+    {
+        $ocrTexts = [];
+        $ocrWords2D = [];
+
+        foreach ($files as $pageIdx => $file) {
+            if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                continue;
+            }
+            $realPath = $file->getRealPath();
+            if ($realPath === false || ! is_readable($realPath)) {
+                continue;
+            }
+            $rawBytes = file_get_contents($realPath);
+            if ($rawBytes === false || $rawBytes === '') {
+                continue;
+            }
+            $mime = $this->resolveMimeType($file);
+            $base64Img = "data:{$mime};base64," . base64_encode($rawBytes);
+            unset($rawBytes);
+
+            try {
+                $res = Http::timeout(25)
+                    ->connectTimeout(8)
+                    ->asForm()
+                    ->post('https://api.ocr.space/parse/image', [
+                        'apikey' => 'helloworld',
+                        'base64Image' => $base64Img,
+                        'isTable' => 'true',
+                        'isOverlayRequired' => 'true',
+                        'OCREngine' => '2',
+                        'scale' => 'true',
+                    ]);
+            } catch (Throwable) {
+                continue;
+            }
+
+            if (! $res->successful()) {
+                continue;
+            }
+
+            $parsedResults = $res->json('ParsedResults', []);
+            if (! is_array($parsedResults)) {
+                continue;
+            }
+
+            foreach ($parsedResults as $pIdx => $pr) {
+                $txt = trim((string) ($pr['ParsedText'] ?? ''));
+                $txt = trim((string) preg_replace('/\[Note:.*?\]\s*/is', '', $txt));
+                if ($txt !== '') {
+                    $ocrTexts[] = '=== OCR PAGE ' . ($pageIdx + $pIdx + 1) . " ===\n" . $txt;
+                }
+                $lines = $pr['TextOverlay']['Lines'] ?? [];
+                if (is_array($lines)) {
+                    $maxX = 1000;
+                    $maxY = 1000;
+                    foreach ($lines as $ln) {
+                        foreach (($ln['Words'] ?? []) as $wd) {
+                            $rEdge = (int) (($wd['Left'] ?? 0) + ($wd['Width'] ?? 0));
+                            $bEdge = (int) (($wd['Top'] ?? 0) + ($wd['Height'] ?? 0));
+                            if ($rEdge > $maxX) {
+                                $maxX = $rEdge;
+                            }
+                            if ($bEdge > $maxY) {
+                                $bEdge = $bEdge;
+                            }
+                        }
+                    }
+                    foreach ($lines as $ln) {
+                        foreach (($ln['Words'] ?? []) as $wd) {
+                            $wText = trim((string) ($wd['WordText'] ?? ''));
+                            if ($wText === '') {
+                                continue;
+                            }
+                            $left = (float) ($wd['Left'] ?? 0);
+                            $top = (float) ($wd['Top'] ?? 0);
+                            $width = (float) ($wd['Width'] ?? (strlen($wText) * 8));
+                            $ocrWords2D[] = [
+                                'str' => $wText,
+                                'x' => $left,
+                                'y' => ($maxY + 50) - $top,
+                                'width' => max(4.0, $width),
+                                'pageWidth' => $maxX + 40,
+                                'pageNum' => 200 + $pageIdx + $pIdx,
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+
+        return [
+            'converted_text' => implode("\n", $ocrTexts),
+            'items_2d' => $ocrWords2D,
+        ];
+    }
+
+    /**
      * Multi-page & multi-modal extraction: combines any client-extracted PDF/OCR text
      * with one or more uploaded page images or PDF files in a single low-latency Gemini request.
      *
@@ -108,7 +212,7 @@ class GeminiPDSService
     private function callGeminiStructured(array $userParts): array
     {
         $apiKey = trim((string) config('services.gemini.api_key', ''));
-        $model = trim((string) config('services.gemini.model', 'gemini-2.5-flash'));
+        $primaryModel = trim((string) config('services.gemini.model', 'gemini-flash-lite-latest'));
         $timeout = (int) config('services.gemini.timeout', 55);
 
         if ($apiKey === '' || $apiKey === 'your_gemini_api_key_here') {
@@ -119,74 +223,95 @@ class GeminiPDSService
 
         $todayFormatted = Carbon::now()->format('d/m/Y');
 
-        $endpoint = sprintf(
-            'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
-            rawurlencode($model)
-        );
+        // Automatic Multi-Model Rotation on HTTP 429 (Quota/Rate Limit) or 503
+        $candidateModels = array_values(array_unique(array_filter([
+            $primaryModel,
+            'gemini-flash-lite-latest',
+            'gemini-3-flash-preview',
+            'gemini-3.1-flash-lite-preview',
+            'gemini-2.5-flash',
+        ])));
 
-        $generationConfig = [
-            'temperature' => 0.0,
-            'responseMimeType' => 'application/json',
-            'responseSchema' => $this->getStructuredOutputSchema(),
-        ];
+        $response = null;
+        $lastStatus = 0;
+        $lastApiMessage = '';
 
-        if (str_contains($model, '2.5')) {
-            $generationConfig['thinkingConfig'] = [
-                'thinkingBudget' => 0,
+        foreach ($candidateModels as $model) {
+            $endpoint = sprintf(
+                'https://generativelanguage.googleapis.com/v1beta/models/%s:generateContent',
+                rawurlencode($model)
+            );
+
+            $generationConfig = [
+                'temperature' => 0.0,
+                'responseMimeType' => 'application/json',
+                'responseSchema' => $this->getStructuredOutputSchema(),
             ];
-        }
 
-        $payload = [
-            'systemInstruction' => [
-                'parts' => [
-                    [
-                        'text' => $this->buildSystemPrompt($todayFormatted),
+            if (str_contains($model, '2.5')) {
+                $generationConfig['thinkingConfig'] = [
+                    'thinkingBudget' => 0,
+                ];
+            }
+
+            $payload = [
+                'systemInstruction' => [
+                    'parts' => [
+                        [
+                            'text' => $this->buildSystemPrompt($todayFormatted),
+                        ],
                     ],
                 ],
-            ],
-            'contents' => [
-                [
-                    'role' => 'user',
-                    'parts' => $userParts,
+                'contents' => [
+                    [
+                        'role' => 'user',
+                        'parts' => $userParts,
+                    ],
                 ],
-            ],
-            'generationConfig' => $generationConfig,
-        ];
+                'generationConfig' => $generationConfig,
+            ];
+
+            try {
+                $res = Http::timeout($timeout)
+                    ->connectTimeout(10)
+                    ->withHeaders([
+                        'x-goog-api-key' => $apiKey,
+                        'Content-Type' => 'application/json',
+                    ])
+                    ->post($endpoint, $payload);
+            } catch (ConnectionException) {
+                Log::warning('Gemini API request timed out during PDS scan.', ['model' => $model]);
+                continue;
+            } catch (Throwable) {
+                Log::error('Gemini API network error during PDS scan.', ['model' => $model]);
+                continue;
+            } finally {
+                unset($payload);
+            }
+
+            if ($res->successful()) {
+                $response = $res;
+                break;
+            }
+
+            $lastStatus = $res->status();
+            $lastApiMessage = (string) data_get($res->json(), 'error.message', 'Unexpected API status ' . $lastStatus);
+
+            // If rate-limited (429), overloaded (503), or model not found (404), rotate to next model immediately
+            if (in_array($lastStatus, [429, 503, 404], true)) {
+                continue;
+            }
+
+            break;
+        }
 
         unset($userParts);
 
-        try {
-            $response = Http::timeout($timeout)
-                ->connectTimeout(10)
-                ->withHeaders([
-                    'x-goog-api-key' => $apiKey,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post($endpoint, $payload);
-        } catch (ConnectionException) {
-            Log::warning('Gemini API request timed out during PDS scan.');
-            throw new RuntimeException(
-                'Gemini API timed out. Switch to "Local OCR / PDF Only" mode or upload a cropped image.'
-            );
-        } catch (Throwable) {
-            Log::error('Gemini API network error during PDS scan.');
-            throw new RuntimeException(
-                'Could not reach Gemini API. Switch to "Local OCR / PDF Only" mode or add rows manually.'
-            );
-        } finally {
-            unset($payload);
-        }
-
-        if (! $response->successful()) {
-            $status = $response->status();
-            $apiMessage = (string) data_get($response->json(), 'error.message', 'Unexpected API status ' . $status);
-            Log::warning('Gemini API returned non-200 status.', ['status' => $status]);
-
-            if ($status === 429) {
-                throw new RuntimeException('Gemini API rate limit reached (HTTP 429). Use "Local OCR / PDF Only" mode instead.');
+        if ($response === null || ! $response->successful()) {
+            if ($lastStatus === 429) {
+                throw new RuntimeException('All Gemini model quotas reached (HTTP 429). Auto-switching to Local OCR / PDF parser.');
             }
-
-            throw new RuntimeException('Gemini API Error (' . $status . '): ' . $apiMessage);
+            throw new RuntimeException('Gemini API Error (' . ($lastStatus ?: 'Network') . '): ' . ($lastApiMessage ?: 'Service unavailable'));
         }
 
         $rawJsonText = (string) data_get($response->json(), 'candidates.0.content.parts.0.text', '');

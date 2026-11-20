@@ -117,6 +117,16 @@ class PDSController
             ], 422);
         }
 
+        if (trim((string) $request->input('scan_mode', '')) === 'ocr_text_only') {
+            $ocrResult = $geminiService->convertImagesToTextViaTableOcr($files);
+
+            return response()->json([
+                'ok' => $ocrResult['converted_text'] !== '',
+                'converted_text' => $ocrResult['converted_text'],
+                'items_2d' => $ocrResult['items_2d'],
+            ]);
+        }
+
         try {
             $extracted = $geminiService->extractFromPayload($extractedText, $files);
 
