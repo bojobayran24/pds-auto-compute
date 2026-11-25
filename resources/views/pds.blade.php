@@ -1069,6 +1069,49 @@
                                 >
                             </div>
 
+                            <div class="flex flex-wrap items-center justify-between gap-2 min-w-0">
+                                <div class="flex flex-wrap items-center gap-2 min-w-0 flex-1">
+                                    <label class="text-[11px] font-bold uppercase tracking-wide text-slate-500 w-28 shrink-0">
+                                        Date of Birth:
+                                    </label>
+                                    <span
+                                        class="font-mono text-xs font-bold tracking-wide px-2.5 py-1 rounded border"
+                                        :class="dateOfBirth ? 'bg-white text-slate-900 border-slate-300' : 'bg-white text-slate-400 border-slate-200 font-normal'"
+                                        x-text="dateOfBirth ? formatDateDDMMMYYYY(dateOfBirth) : 'DD - MMM - YYYY'"
+                                    ></span>
+                                    <input
+                                        type="date"
+                                        x-model="dateOfBirth"
+                                        class="no-print font-mono text-[11px] text-slate-700 bg-white border border-slate-300 rounded px-2 py-1 focus:border-slate-900 focus:outline-none"
+                                        title="Auto-detected from PDS Page 1 (Item 3) or pick/edit manually"
+                                    >
+                                    <button
+                                        x-show="dateOfBirth"
+                                        x-cloak
+                                        type="button"
+                                        @click="copyTitleToClipboard(formatDateDDMMMYYYY(dateOfBirth), 'dob_copy')"
+                                        :class="copiedRowId === 'dob_copy'
+                                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                                            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100 hover:text-slate-900'"
+                                        class="no-print px-2 py-0.5 text-[10px] font-semibold border rounded transition whitespace-nowrap"
+                                        title="Copy formatted Date of Birth"
+                                    >
+                                        <span x-text="copiedRowId === 'dob_copy' ? 'Copied ✓' : 'Copy'"></span>
+                                    </button>
+                                    <template x-if="dobVerification.status !== 'empty'">
+                                        <span
+                                            class="no-print text-[10px] font-semibold px-2 py-0.5 rounded border whitespace-nowrap"
+                                            :class="dobVerification.status === 'ok'
+                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                                : (dobVerification.status === 'error'
+                                                    ? 'bg-red-50 text-red-700 border-red-300'
+                                                    : 'bg-amber-50 text-amber-800 border-amber-300')"
+                                            x-text="dobVerification.label"
+                                        ></span>
+                                    </template>
+                                </div>
+                            </div>
+
                             <div class="flex items-center justify-between gap-2 min-w-0">
                                 <div class="flex items-center gap-2 min-w-0 flex-1">
                                     <span class="text-[11px] font-bold uppercase tracking-wide text-slate-500 w-28 shrink-0">
@@ -1631,6 +1674,7 @@
                 applicantName: '',
                 targetPosition: '',
                 uploadedFileName: '',
+                dateOfBirth: '', // ISO YYYY-MM-DD from PDS Page 1 (Item 3: Date of Birth)
                 dateAccomplished: '', // ISO YYYY-MM-DD from PDS Page 4 ("Date Accomplished") or manual input
                 showPreviewModal: false,
                 showPrivacyModal: false,
@@ -1696,6 +1740,7 @@
                     this.$watch('applicantName', () => this.saveToSessionStorage());
                     this.$watch('targetPosition', () => this.saveToSessionStorage());
                     this.$watch('uploadedFileName', () => this.saveToSessionStorage());
+                    this.$watch('dateOfBirth', () => this.saveToSessionStorage());
                     this.$watch('dateAccomplished', () => this.saveToSessionStorage());
                     this.$watch('scanEngine', () => this.saveToSessionStorage());
 
@@ -2040,6 +2085,75 @@
                     const m = String(iso || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
                     if (!m) return iso || '';
                     return `${m[3]}/${m[2]}/${m[1]}`;
+                },
+
+                formatDateDDMMMYYYY(iso) {
+                    const m = String(iso || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                    if (!m) return iso || '';
+                    const monthsShort = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+                    const monthIdx = parseInt(m[2], 10) - 1;
+                    if (monthIdx < 0 || monthIdx > 11) return iso || '';
+                    return `${m[3]} - ${monthsShort[monthIdx]} - ${m[1]}`;
+                },
+
+                get dobVerification() {
+                    const iso = String(this.dateOfBirth || '').trim();
+                    if (!iso) {
+                        return { status: 'empty', age: null, label: '' };
+                    }
+                    const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+                    if (!m) {
+                        return { status: 'error', age: null, label: '⚠ Invalid date format' };
+                    }
+                    const year = parseInt(m[1], 10);
+                    const month = parseInt(m[2], 10);
+                    const day = parseInt(m[3], 10);
+                    const dob = new Date(year, month - 1, day);
+                    if (dob.getFullYear() !== year || (dob.getMonth() + 1) !== month || dob.getDate() !== day) {
+                        return { status: 'error', age: null, label: '⚠ Invalid calendar date' };
+                    }
+
+                    const ref = this.presentReferenceDate;
+                    let age = ref.getFullYear() - year;
+                    const monthDiff = (ref.getMonth() + 1) - month;
+                    if (monthDiff < 0 || (monthDiff === 0 && ref.getDate() < day)) {
+                        age -= 1;
+                    }
+
+                    if (dob > ref || year >= ref.getFullYear()) {
+                        return { status: 'error', age, label: `⚠ Invalid birth year (${year} — future/current year typo)` };
+                    }
+                    if (age < 18) {
+                        return { status: 'error', age, label: `⚠ Verify birth year (${age} yrs old — under 18 / possible typo)` };
+                    }
+                    if (year < 1945 || age > 80) {
+                        return { status: 'error', age, label: `⚠ Verify birth year (${age} yrs old — check for typo)` };
+                    }
+
+                    // Cross-check birth year against earliest Work Experience year
+                    let earliestWorkYear = null;
+                    this.workExperiences.forEach(w => {
+                        const dt = this.parseDMY(w.date_from);
+                        if (dt) {
+                            const wy = dt.getFullYear();
+                            if (earliestWorkYear === null || wy < earliestWorkYear) {
+                                earliestWorkYear = wy;
+                            }
+                        }
+                    });
+                    if (earliestWorkYear !== null && (earliestWorkYear - year) < 15) {
+                        return {
+                            status: 'error',
+                            age,
+                            label: `⚠ Birth year (${year}) conflicts with earliest work exp (${earliestWorkYear})`
+                        };
+                    }
+
+                    if (age >= 65) {
+                        return { status: 'warn', age, label: `⚠ ${age} yrs old — verify birth year (65+ retirement age)` };
+                    }
+
+                    return { status: 'ok', age, label: `✓ Verified (${age} yrs old)` };
                 },
 
                 recomputeAllPresentWorkRows() {
@@ -2413,6 +2527,7 @@
                     this.applicantName = '';
                     this.targetPosition = '';
                     this.uploadedFileName = '';
+                    this.dateOfBirth = '';
                     this.dateAccomplished = '';
                     if (this.rawPdfObjectUrl) {
                         URL.revokeObjectURL(this.rawPdfObjectUrl);
@@ -2539,6 +2654,7 @@
                         this.trainings = [];
                         this.workExperiences = [];
                         this.applicantName = '';
+                        this.dateOfBirth = '';
                         this.dateAccomplished = '';
                         this.convertedRawText = '';
                         this.showConvertedText = false;
@@ -2661,6 +2777,10 @@
                                 if (localParsed.applicant_name && (!this.appendOnScan || !this.applicantName.trim())) {
                                     this.applicantName = localParsed.applicant_name;
                                 }
+                                const detectedLocalDob = this.extractDateOfBirthFromText(combinedLocalText);
+                                if (detectedLocalDob && (!this.appendOnScan || !this.dateOfBirth)) {
+                                    this.dateOfBirth = detectedLocalDob;
+                                }
                                 const detectedLocalDateAcc = this.extractDateAccomplishedFromText(combinedLocalText);
                                 if (detectedLocalDateAcc && (!this.appendOnScan || !this.dateAccomplished)) {
                                     this.dateAccomplished = detectedLocalDateAcc;
@@ -2712,6 +2832,10 @@
                             if (fallbackCount > 0) {
                                 if (fallbackParsed.applicant_name && (!this.appendOnScan || !this.applicantName.trim())) {
                                     this.applicantName = fallbackParsed.applicant_name;
+                                }
+                                const detectedFbDob = this.extractDateOfBirthFromText(this.convertedRawText || fullExtractedText);
+                                if (detectedFbDob && (!this.appendOnScan || !this.dateOfBirth)) {
+                                    this.dateOfBirth = detectedFbDob;
                                 }
                                 const detectedFbDateAcc = this.extractDateAccomplishedFromText(this.convertedRawText || fullExtractedText);
                                 if (detectedFbDateAcc && (!this.appendOnScan || !this.dateAccomplished)) {
@@ -2843,8 +2967,8 @@
                             allLines.push(...pageLines);
                             items2D.push(...page2D);
                         } else if (isPurePage1 && pageLines.length > 0) {
-                            allLines.push(`=== PDF PAGE 1 HEADER (NAME ONLY) ===`);
-                            allLines.push(...pageLines.slice(0, 18));
+                            allLines.push(`=== PDF PAGE 1 HEADER (NAME & DOB ONLY) ===`);
+                            allLines.push(...pageLines.slice(0, 28));
                         } else if (isPurePage4 && pageLines.length > 0) {
                             allLines.push(`=== PDF PAGE ${pageNum} FOOTER (DATE ACCOMPLISHED) ===`);
                             allLines.push(...pageLines.slice(-28));
@@ -3661,6 +3785,93 @@
                     return `${dd}/${mm}/${yyyy}`;
                 },
 
+                extractDateOfBirthFromText(rawText) {
+                    if (!rawText) return '';
+                    const months = {
+                        JAN: '01', JANUARY: '01',
+                        FEB: '02', FEBRUARY: '02',
+                        MAR: '03', MARCH: '03',
+                        APR: '04', APRIL: '04',
+                        MAY: '05',
+                        JUN: '06', JUNE: '06',
+                        JUL: '07', JULY: '07',
+                        AUG: '08', AUGUST: '08',
+                        SEP: '09', SEPT: '09', SEPTEMBER: '09',
+                        OCT: '10', OCTOBER: '10',
+                        NOV: '11', NOVEMBER: '11',
+                        DEC: '12', DECEMBER: '12'
+                    };
+
+                    const parseDobCandidate = (str, preferMdy = false) => {
+                        const s = String(str || '').trim();
+                        if (!s) return '';
+
+                        // 1. DD MONTH YYYY (e.g. "24 NOV 1995", "24 NOVEMBER 1995")
+                        let m = s.match(/\b(\d{1,2})\s*[\-\s]\s*([A-Z]{3,9})\.?\s*[\-,\s]\s*(\d{4})\b/i);
+                        if (m && months[m[2].toUpperCase()]) {
+                            const dd = String(parseInt(m[1], 10)).padStart(2, '0');
+                            const mm = months[m[2].toUpperCase()];
+                            return `${m[3]}-${mm}-${dd}`;
+                        }
+
+                        // 2. MONTH DD, YYYY (e.g. "NOVEMBER 24, 1995")
+                        m = s.match(/\b([A-Z]{3,9})\.?\s+(\d{1,2})(?:st|nd|rd|th)?\s*,?\s*(\d{4})\b/i);
+                        if (m && months[m[1].toUpperCase()]) {
+                            const dd = String(parseInt(m[2], 10)).padStart(2, '0');
+                            const mm = months[m[1].toUpperCase()];
+                            return `${m[3]}-${mm}-${dd}`;
+                        }
+
+                        // 3. ISO YYYY-MM-DD
+                        m = s.match(/\b(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})\b/);
+                        if (m) {
+                            return `${m[1]}-${String(parseInt(m[2], 10)).padStart(2, '0')}-${String(parseInt(m[3], 10)).padStart(2, '0')}`;
+                        }
+
+                        // 4. Numeric dd/mm/yyyy (CS Form No. 212 Revised 2025) or mm/dd/yyyy (Revised 2017)
+                        m = s.match(/\b(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})\b/);
+                        if (m) {
+                            const p1 = parseInt(m[1], 10);
+                            const p2 = parseInt(m[2], 10);
+                            const yr = parseInt(m[3], 10);
+                            let day, month;
+                            if (p1 > 12 && p2 <= 12) {
+                                day = p1; month = p2;
+                            } else if (p2 > 12 && p1 <= 12) {
+                                month = p1; day = p2;
+                            } else if (preferMdy) {
+                                month = p1; day = p2;
+                            } else {
+                                // Default to CS Form No. 212 Revised 2025 (dd/mm/yyyy)
+                                day = p1; month = p2;
+                            }
+                            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+                                return `${yr}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                            }
+                        }
+
+                        return '';
+                    };
+
+                    const lines = rawText.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+                    for (let i = 0; i < Math.min(lines.length, 45); i++) {
+                        if (/DATE\s*OF\s*BIRTH/i.test(lines[i])) {
+                            const preferMdy = /mm\s*\/\s*dd\s*\/\s*yyyy/i.test(lines[i])
+                                || (i + 1 < lines.length && /mm\s*\/\s*dd\s*\/\s*yyyy/i.test(lines[i + 1]));
+                            const candidates = [
+                                lines[i],
+                                i + 1 < lines.length ? lines[i + 1] : '',
+                                i + 2 < lines.length ? lines[i + 2] : ''
+                            ];
+                            for (const c of candidates) {
+                                const parsed = parseDobCandidate(c, preferMdy);
+                                if (parsed) return parsed;
+                            }
+                        }
+                    }
+                    return '';
+                },
+
                 extractDateAccomplishedFromText(rawText) {
                     if (!rawText) return '';
                     const months = {
@@ -3788,6 +3999,12 @@
                         this.applicantName = detectedName;
                     }
 
+                    const detectedDob = String(result.data?.date_of_birth || '').trim()
+                        || this.extractDateOfBirthFromText(extractedText);
+                    if (detectedDob && (!this.appendOnScan || !this.dateOfBirth)) {
+                        this.dateOfBirth = detectedDob;
+                    }
+
                     const detectedDateAcc = String(result.data?.date_accomplished || '').trim()
                         || this.extractDateAccomplishedFromText(extractedText);
                     if (detectedDateAcc && (!this.appendOnScan || !this.dateAccomplished)) {
@@ -3912,6 +4129,7 @@
                             applicantName: this.applicantName,
                             targetPosition: this.targetPosition,
                             uploadedFileName: this.uploadedFileName,
+                            dateOfBirth: this.dateOfBirth,
                             dateAccomplished: this.dateAccomplished,
                             scanEngine: this.scanEngine,
                             trainings: this.trainings.map(t => ({ ...t, editing: false })),
@@ -3940,6 +4158,7 @@
                             this.applicantName = parsed.applicantName || '';
                             this.targetPosition = parsed.targetPosition || '';
                             this.uploadedFileName = parsed.uploadedFileName || '';
+                            this.dateOfBirth = parsed.dateOfBirth || '';
                             this.dateAccomplished = parsed.dateAccomplished || '';
                             this.previewPageImages = Array.isArray(parsed.previewPageImages) ? parsed.previewPageImages : [];
                             if (['hybrid', 'local', 'gemini'].includes(parsed.scanEngine)) {

@@ -330,13 +330,14 @@ class GeminiPDSService
 
         return [
             'applicant_name' => trim((string) ($decoded['applicant_name'] ?? '')),
-            'date_accomplished' => $this->normalizeDateAccomplished((string) ($decoded['date_accomplished'] ?? '')),
+            'date_of_birth' => $this->normalizeIsoDate((string) ($decoded['date_of_birth'] ?? '')),
+            'date_accomplished' => $this->normalizeIsoDate((string) ($decoded['date_accomplished'] ?? '')),
             'work_experience' => $this->normalizeWorkExperience($decoded['work_experience'] ?? []),
             'trainings' => $this->normalizeTrainings($decoded['trainings'] ?? []),
         ];
     }
 
-    private function normalizeDateAccomplished(string $raw): string
+    private function normalizeIsoDate(string $raw): string
     {
         $raw = trim($raw);
         if ($raw === '') {
@@ -344,6 +345,18 @@ class GeminiPDSService
         }
         if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $m) && checkdate((int) $m[2], (int) $m[3], (int) $m[1])) {
             return $raw;
+        }
+        if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/', $raw, $m)) {
+            $p1 = (int) $m[1];
+            $p2 = (int) $m[2];
+            $yr = (int) $m[3];
+            // CS Form No. 212 (Revised 2025) uses dd/mm/yyyy
+            if (checkdate($p2, $p1, $yr)) {
+                return sprintf('%04d-%02d-%02d', $yr, $p2, $p1);
+            }
+            if (checkdate($p1, $p2, $yr)) {
+                return sprintf('%04d-%02d-%02d', $yr, $p1, $p2);
+            }
         }
         try {
             return Carbon::parse($raw)->format('Y-m-d');
@@ -361,15 +374,20 @@ class GeminiPDSService
 You are an expert document parser specialized in the Philippine Civil Service Commission Personal Data Sheet (CS Form No. 212, Revised 2025 and Revised 2017).
 
 STRICT MULTI-PAGE EXTRACTION, CONFIDENTIALITY & PRIVACY RULES (RA 10173):
-0. CONFIDENTIALITY & ZERO-DISCLOSURE: This document is a confidential Philippine government Personal Data Sheet governed by the Data Privacy Act of 2012 (RA 10173). Process this request strictly in stateless extraction mode only. NEVER output, echo, or include government IDs, addresses, phone numbers, email addresses, birthdates, family details, or legal Q&A answers anywhere in your output.
+0. CONFIDENTIALITY & ZERO-DISCLOSURE: This document is a confidential Philippine government Personal Data Sheet governed by the Data Privacy Act of 2012 (RA 10173). Process this request strictly in stateless extraction mode only. NEVER output, echo, or include government IDs, addresses, phone numbers, email addresses, family details, or legal Q&A answers anywhere in your output.
 1. A PDS document often spans multiple pages where:
+   - Section I (Item 2: Name, Item 3: DATE OF BIRTH) is on Page 1. Note: CS Form No. 212 (Revised 2025) uses "dd/mm/yyyy" for Date of Birth (while Revised 2017 used "mm/dd/yyyy").
    - Section V (Item 28: WORK EXPERIENCE) is typically on Page 2 (or a continuation sheet).
    - Section VII (Item 30: LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS / TRAINING PROGRAMS ATTENDED) is typically on Page 3 (or a continuation sheet).
    - "Date Accomplished" is typically on the last page (Page 4) right above/below the "Date Accomplished" box under the applicant's signature (e.g., "05 JANUARY 2026", "January 5, 2026", "05/01/2026").
-   You MUST inspect ALL provided pages/images and text blocks and extract EVERY row from BOTH Section V and Section VII, plus "date_accomplished" if visible.
-2. Extract the applicant's full name ("applicant_name", e.g., "DELA CRUZ, JUAN SANTOS" or "JUAN S. DELA CRUZ") if visible anywhere in the document (such as Section I Surname/First Name/Middle Name or page headers/footers), and "date_accomplished" formatted strictly as "YYYY-MM-DD" (e.g., "2026-01-05") if clearly readable on Page 4 (otherwise empty string ""). Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, family background, or legal questionnaire answers.
+   You MUST inspect ALL provided pages/images and text blocks and extract EVERY row from BOTH Section V and Section VII, plus "applicant_name", "date_of_birth", and "date_accomplished" if visible.
+2. Extract:
+   - "applicant_name": Full name (e.g., "DELA CRUZ, JUAN SANTOS") if visible.
+   - "date_of_birth": Item 3 Date of Birth on Page 1, formatted strictly as "YYYY-MM-DD" (e.g., "1995-11-24"), preserving the exact year written on the PDS so the HR evaluator can verify typos, or empty string "" if not visible.
+   - "date_accomplished": Page 4 Date Accomplished formatted strictly as "YYYY-MM-DD" (e.g., "2026-01-05") if clearly readable, otherwise empty string "".
+   Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, family background, or legal questionnaire answers.
 3. Ignore blank placeholder rows or rows labeled "N/A", "NONE", or "(Continue on separate sheet if necessary)".
-4. Format all dates strictly as "dd/mm/yyyy" (e.g., "13/01/2026", "24/10/2022").
+4. Format all work/training dates strictly as "dd/mm/yyyy" (e.g., "13/01/2026", "24/10/2022").
    - If a work experience "To" date says "PRESENT", "TO DATE", or "CURRENT", output "PRESENT" in uppercase.
 5. For each Work Experience item (Section V / Item 28):
    - "position_title": Exact position title (e.g., "ADMINISTRATIVE OFFICER II").
@@ -402,6 +420,10 @@ PROMPT;
                 'applicant_name' => [
                     'type' => 'STRING',
                     'description' => 'Full name of the PDS owner/applicant if visible in the document, otherwise empty string',
+                ],
+                'date_of_birth' => [
+                    'type' => 'STRING',
+                    'description' => 'Item 3 Date of Birth on Page 1 formatted as YYYY-MM-DD (e.g. 1995-11-24; CS Form 212 Revised 2025 uses dd/mm/yyyy), or empty string if not visible',
                 ],
                 'date_accomplished' => [
                     'type' => 'STRING',

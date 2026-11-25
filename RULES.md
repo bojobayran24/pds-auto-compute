@@ -22,13 +22,14 @@ This document defines the mandatory security, confidentiality, and data-handling
 The system and AI prompt MUST strictly enforce **Data Minimization**:
 - **Allowed Fields Only**:
   - Applicant Name (for HR verification header)
+  - Date of Birth (Item 3, for HR age/birth-year verification)
   - PDS Date Accomplished (Page 4, used solely as the `PRESENT` cut-off date)
   - Section V / Item 28: Work Experience
   - Section VII / Item 30: Learning & Development / Trainings
 - **Strictly Prohibited / Ignored Fields**:
   - Government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys / PSN, SSS)
   - Residential & Permanent Addresses, ZIP Codes, Telephone / Mobile Numbers, Email Addresses
-  - Birthdate, Place of Birth, Citizenship, Civil Status, Physical Attributes
+  - Place of Birth, Citizenship, Civil Status, Physical Attributes
   - Family Background, Character References, and Page 4 Legal Questionnaire Answers
 - **Client-Side Page Filtering**: Page 1 personal details (below the applicant name header) and Page 4 legal Q&A are stripped client-side before transmission.
 

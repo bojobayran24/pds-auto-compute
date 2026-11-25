@@ -565,13 +565,13 @@ if ($method === 'POST' && $routePath === '/api/scan-pds') {
 You are an expert document parser specialized in the Philippine Civil Service Commission Personal Data Sheet (CS Form No. 212, Revised 2025).
 
 STRICT PRIVACY, CONFIDENTIALITY & EXTRACTION RULES (RA 10173):
-0. CONFIDENTIALITY & ZERO-DISCLOSURE: This document is a confidential Philippine government Personal Data Sheet governed by the Data Privacy Act of 2012 (RA 10173). Process this request strictly in stateless extraction mode only. NEVER output, echo, or include government IDs, addresses, phone numbers, email addresses, birthdates, family details, or legal Q&A answers anywhere in your output.
+0. CONFIDENTIALITY & ZERO-DISCLOSURE: This document is a confidential Philippine government Personal Data Sheet governed by the Data Privacy Act of 2012 (RA 10173). Process this request strictly in stateless extraction mode only. NEVER output, echo, or include government IDs, addresses, phone numbers, email addresses, family details, or legal Q&A answers anywhere in your output.
 1. Extract ONLY two tables if present in the uploaded PDF or image:
    - Section V (Item 28): WORK EXPERIENCE
    - Section VII (Item 30): LEARNING AND DEVELOPMENT (L&D) INTERVENTIONS / TRAINING PROGRAMS ATTENDED
-2. Extract the applicant's full name ("applicant_name") if visible anywhere in the document (e.g. Section I Surname / First Name / Middle Name or signature block). Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, or legal questionnaire answers.
+2. Extract the applicant's full name ("applicant_name") and Item 3 Date of Birth ("date_of_birth", formatted strictly as "YYYY-MM-DD", noting CS Form No. 212 Revised 2025 uses dd/mm/yyyy while Revised 2017 used mm/dd/yyyy; preserve the exact year written on the PDS) if visible on Page 1. Do NOT extract government IDs (TIN, GSIS, Pag-IBIG, PhilHealth, PhilSys/PSN), residential addresses, contact numbers, or legal questionnaire answers.
 3. Ignore blank placeholder rows or rows labeled "N/A", "NONE", or "(Continue on separate sheet if necessary)".
-4. Format all dates strictly as "dd/mm/yyyy" (e.g., "01/07/2026", "28/08/2025").
+4. Format all work/training dates strictly as "dd/mm/yyyy" (e.g., "01/07/2026", "28/08/2025").
    - If a work experience "To" date says "PRESENT", "TO DATE", or "CURRENT", output "PRESENT" in uppercase.
 5. For each Work Experience item:
    - "position_title", "department_agency_company", "date_from", "date_to", "status_of_appointment", "gov_service" ("Y" or "N"), and "computed_years" (decimal years between date_from and date_to using date_accomplished if found or {$todayFormatted} when date_to is "PRESENT", rounded to 1 decimal place).
@@ -584,6 +584,7 @@ PROMPT;
         'type' => 'OBJECT',
         'properties' => [
             'applicant_name' => ['type' => 'STRING'],
+            'date_of_birth' => ['type' => 'STRING'],
             'date_accomplished' => ['type' => 'STRING'],
             'work_experience' => [
                 'type' => 'ARRAY',
@@ -875,18 +876,33 @@ PROMPT;
     }
 
     $applicantName = trim((string) ($extracted['applicant_name'] ?? ''));
-    $rawDateAcc = trim((string) ($extracted['date_accomplished'] ?? ''));
-    $dateAccomplished = '';
-    if ($rawDateAcc !== '') {
-        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $rawDateAcc, $dm) && checkdate((int) $dm[2], (int) $dm[3], (int) $dm[1])) {
-            $dateAccomplished = $rawDateAcc;
-        } else {
-            $ts = strtotime($rawDateAcc);
-            if ($ts !== false) {
-                $dateAccomplished = date('Y-m-d', $ts);
+
+    $normalizeIsoDate = static function (string $raw): string {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return '';
+        }
+        if (preg_match('/^(\d{4})-(\d{2})-(\d{2})$/', $raw, $dm) && checkdate((int) $dm[2], (int) $dm[3], (int) $dm[1])) {
+            return $raw;
+        }
+        if (preg_match('/^(\d{1,2})[\/\-\.](\d{1,2})[\/\-\.](\d{4})$/', $raw, $dm)) {
+            $p1 = (int) $dm[1];
+            $p2 = (int) $dm[2];
+            $yr = (int) $dm[3];
+            // CS Form No. 212 (Revised 2025) uses dd/mm/yyyy
+            if (checkdate($p2, $p1, $yr)) {
+                return sprintf('%04d-%02d-%02d', $yr, $p2, $p1);
+            }
+            if (checkdate($p1, $p2, $yr)) {
+                return sprintf('%04d-%02d-%02d', $yr, $p1, $p2);
             }
         }
-    }
+        $ts = strtotime($raw);
+        return $ts !== false ? date('Y-m-d', $ts) : '';
+    };
+
+    $dateOfBirth = $normalizeIsoDate((string) ($extracted['date_of_birth'] ?? ''));
+    $dateAccomplished = $normalizeIsoDate((string) ($extracted['date_accomplished'] ?? ''));
 
     $sendJson([
         'ok' => true,
@@ -895,6 +911,7 @@ PROMPT;
             : sprintf('Extracted %d training(s) and %d work experience item(s).', count($trainingRows), count($workRows)),
         'data' => [
             'applicant_name' => $applicantName,
+            'date_of_birth' => $dateOfBirth,
             'date_accomplished' => $dateAccomplished,
             'work_experience' => $workRows,
             'trainings' => $trainingRows,
